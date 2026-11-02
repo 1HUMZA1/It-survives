@@ -5,6 +5,7 @@ import * as THREE from '../three.js';
 export class TextureGenerator {
   // 1. Tropical Beach Sand (golden coral sand with ripples)
   static createSandTexture() {
+    if (typeof document === 'undefined') return null;
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 512;
@@ -43,6 +44,7 @@ export class TextureGenerator {
 
   // 2. Wet Sand (shoreline wetness, darker with glossy look)
   static createWetSandTexture() {
+    if (typeof document === 'undefined') return null;
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 512;
@@ -75,6 +77,7 @@ export class TextureGenerator {
 
   // 3. Lush Tropical Jungle Grass (vibrant blades, deep forest moss)
   static createGrassTexture() {
+    if (typeof document === 'undefined') return null;
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 512;
@@ -110,6 +113,7 @@ export class TextureGenerator {
 
   // 4. Mountain Cliff Rock (striated rock strata, volcanic crag, crevices)
   static createRockTexture() {
+    if (typeof document === 'undefined') return null;
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 512;
@@ -228,6 +232,7 @@ export class TextureGenerator {
 
   // 7. Water Caustics Texture
   static createCausticsTexture() {
+    if (typeof document === 'undefined') return null;
     const canvas = document.createElement('canvas');
     canvas.width = 256;
     canvas.height = 256;
@@ -260,6 +265,78 @@ export class TextureGenerator {
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(16, 16);
+    return texture;
+  }
+
+  // 8. Shoreline Foam Texture (organic sea foam bubbles & lace)
+  static createShoreFoamTexture() {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, 256, 256);
+
+    // Draw bubbly foam lace
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 450; i++) {
+      const x = Math.random() * 256;
+      const y = Math.random() * 256;
+      const r = 2.0 + Math.random() * 6.5;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.4 + Math.random() * 0.5})`;
+      ctx.fill();
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(8, 4);
+    return texture;
+  }
+
+  // 9. Mossy Rock / Mountain Strata Texture
+  static createMossyRockTexture() {
+    if (typeof document === 'undefined') return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#4a443e';
+    ctx.fillRect(0, 0, 512, 512);
+
+    const imgData = ctx.getImageData(0, 0, 512, 512);
+    const data = imgData.data;
+
+    for (let y = 0; y < 512; y++) {
+      for (let x = 0; x < 512; x++) {
+        const i = (y * 512 + x) * 4;
+        const strata = Math.sin(y * 0.12 + Math.sin(x * 0.04) * 2) * 20;
+        const mossNoise = Math.sin(x * 0.08) * Math.cos(y * 0.08);
+        const hasMoss = mossNoise > 0.25;
+
+        if (hasMoss) {
+          data[i] = 45 + Math.random() * 20;
+          data[i + 1] = 85 + Math.random() * 35;
+          data[i + 2] = 40 + Math.random() * 15;
+        } else {
+          data[i] = Math.min(255, Math.max(0, 74 + strata + (Math.random() - 0.5) * 15));
+          data[i + 1] = Math.min(255, Math.max(0, 68 + strata + (Math.random() - 0.5) * 15));
+          data[i + 2] = Math.min(255, Math.max(0, 62 + strata + (Math.random() - 0.5) * 15));
+        }
+        data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(12, 12);
     return texture;
   }
 }

@@ -15,11 +15,11 @@ export class FoliageManager {
     this.fallingTrees = [];
   }
 
-  generateFoliage(count = 480) {
+  generateFoliage(count = 560) {
     const radius = this.terrain.radius;
 
     for (let i = 0; i < count; i++) {
-      const r = Math.sqrt(Math.random()) * (radius * 0.94);
+      const r = Math.sqrt(Math.random()) * (radius * 0.95);
       const theta = Math.random() * Math.PI * 2;
       const x = Math.cos(theta) * r;
       const z = Math.sin(theta) * r;
@@ -40,13 +40,19 @@ export class FoliageManager {
       if (y <= 3.2) {
         // --- 🏖️ Coastal Beach Zone ---
         const roll = Math.random();
-        if (roll < 0.38) {
-          // Large coastal coconut palm
-          const variant = Math.random() < 0.45 ? 'leaning' : 'tall';
+        if (roll < 0.42) {
+          // Varied tropical palm trees (king, tall, leaning, dwarf, sapling)
+          const palmRoll = Math.random();
+          let variant = 'tall';
+          if (palmRoll < 0.25) variant = 'king';
+          else if (palmRoll < 0.55) variant = 'leaning';
+          else if (palmRoll < 0.85) variant = 'dwarf';
+          else variant = 'sapling';
+
           node = FloraModels.createPalmTree(variant);
 
           // Often spawn a fallen ground coconut nearby on the sand!
-          if (Math.random() < 0.7) {
+          if (Math.random() < 0.65) {
             const nut = FloraModels.createGroundCoconut();
             const offset = (Math.random() - 0.5) * 3.5;
             const nutX = x + offset;
@@ -59,44 +65,50 @@ export class FoliageManager {
               this.interactiveNodes.push(nut);
             }
           }
-        } else if (roll < 0.58) {
+        } else if (roll < 0.60) {
           node = FloraModels.createGroundStone(); // Loose beach stones!
         } else if (roll < 0.76) {
           node = FloraModels.createDriftwood(); // Beach driftwood logs!
-        } else if (roll < 0.90) {
+        } else if (roll < 0.88) {
           node = FloraModels.createGroundCoconut();
         } else {
           node = FloraModels.createRockNode();
         }
-      } else if (y <= 18.0) {
-        // --- 🌴 Dense Tropical Jungle Zone ---
+      } else if (y <= 22.0) {
+        // --- 🌴 Dense Tropical Jungle & Rainforest Zone ---
         const roll = Math.random();
-        if (roll < 0.22) {
-          node = FloraModels.createPalmTree('tall');
-        } else if (roll < 0.44) {
+        if (roll < 0.18) {
+          node = FloraModels.createPalmTree('king');
+        } else if (roll < 0.36) {
           node = FloraModels.createJungleTree();
-        } else if (roll < 0.60) {
+        } else if (roll < 0.48) {
+          node = FloraModels.createWildBananaTree(); // Wild banana trees!
+        } else if (roll < 0.58) {
+          node = FloraModels.createBambooGrove(); // Slender bamboo groves!
+        } else if (roll < 0.70) {
           node = FloraModels.createBerryBush(); // Wild juicy berry bushes!
-        } else if (roll < 0.74) {
-          node = FloraModels.createFernNode(); // Lush tropical ferns (fiber & leaves)!
-        } else if (roll < 0.86) {
-          node = FloraModels.createMushroomNode(); // Wild forest mushroom clusters!
-        } else if (roll < 0.94) {
-          node = FloraModels.createRockNode();
+        } else if (roll < 0.82) {
+          node = FloraModels.createFernNode(); // Lush tropical ferns!
+        } else if (roll < 0.90) {
+          node = FloraModels.createMushroomNode(); // Forest mushroom clusters!
+        } else if (roll < 0.95) {
+          node = FloraModels.createMonsteraBush();
         } else {
-          node = FloraModels.createGroundStone();
+          node = FloraModels.createRockNode();
         }
       } else {
-        // --- ⛰️ Mountain & Ridge Zone ---
+        // --- ⛰️ Mountain, Cliff & Ridge Zone ---
         const roll = Math.random();
-        if (roll < 0.48) {
-          node = FloraModels.createRockNode(); // Boulders and mineral rocks
-        } else if (roll < 0.72) {
-          node = FloraModels.createGroundStone(); // Mountain stones
-        } else if (roll < 0.88) {
+        if (roll < 0.35) {
+          node = FloraModels.createCliffRockFace(); // Massive mountain cliff rock faces!
+        } else if (roll < 0.62) {
+          node = FloraModels.createRockNode(); // Mineral boulders
+        } else if (roll < 0.82) {
+          node = FloraModels.createGroundStone(); // Mountain scree stones
+        } else if (roll < 0.92) {
           node = FloraModels.createFernNode();
         } else {
-          node = FloraModels.createMushroomNode(); // Shady cliff mushrooms
+          node = FloraModels.createMushroomNode(); // Cliffside fungi
         }
       }
 
@@ -108,12 +120,61 @@ export class FoliageManager {
       }
     }
 
+    // Instanced Lush Tropical Undergrowth Grass Tufts for cinematic natural scenery
+    this.createInstancedGrassTufts(radius);
+
     // Connect cave mineral nodes if present
     if (this.terrain.hiddenCave && this.terrain.hiddenCave.mineralNodes) {
       for (let minNode of this.terrain.hiddenCave.mineralNodes) {
         this.interactiveNodes.push(minNode);
       }
     }
+  }
+
+  // Instanced high-performance tropical grass & beach dune tufts
+  createInstancedGrassTufts(radius) {
+    const tuftCount = 450;
+    const bladeGeo = new THREE.ConeGeometry(0.35, 0.9, 4);
+    bladeGeo.rotateX(Math.PI / 2.4);
+
+    const grassMat = new THREE.MeshStandardMaterial({
+      color: 0x43a047,
+      roughness: 0.7,
+      side: THREE.DoubleSide
+    });
+
+    const instancedMesh = new THREE.InstancedMesh(bladeGeo, grassMat, tuftCount);
+    const dummy = new THREE.Object3D();
+    const colorDummy = new THREE.Color();
+    const colors = [0x43a047, 0x388e3c, 0x689f38, 0x8bc34a, 0x2e7d32];
+
+    let validCount = 0;
+    for (let i = 0; i < tuftCount; i++) {
+      const r = Math.sqrt(Math.random()) * (radius * 0.92);
+      const theta = Math.random() * Math.PI * 2;
+      const x = Math.cos(theta) * r;
+      const z = Math.sin(theta) * r;
+      const y = this.terrain.getElevation(x, z);
+
+      if (y > 0.4 && y < 28.0) {
+        dummy.position.set(x, y + 0.1, z);
+        const s = 0.8 + Math.random() * 0.7;
+        dummy.scale.set(s, s * (0.8 + Math.random() * 0.5), s);
+        dummy.rotation.set((Math.random() - 0.5) * 0.2, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.2);
+        dummy.updateMatrix();
+
+        instancedMesh.setMatrixAt(validCount, dummy.matrix);
+        colorDummy.setHex(colors[i % colors.length]);
+        instancedMesh.setColorAt(validCount, colorDummy);
+        validCount++;
+      }
+    }
+
+    instancedMesh.count = validCount;
+    instancedMesh.instanceMatrix.needsUpdate = true;
+    if (instancedMesh.instanceColor) instancedMesh.instanceColor.needsUpdate = true;
+    instancedMesh.receiveShadow = true;
+    this.group.add(instancedMesh);
   }
 
   // Check raycast for interactive nodes

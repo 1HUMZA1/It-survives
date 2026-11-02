@@ -1,9 +1,9 @@
-// Animated Tropical Ocean with Gerstner Waves, Shoreline Foam, Caustics, and Underwater Coral Reefs
+// Animated Tropical Ocean with Gerstner Waves, Dedicated Shoreline Surf Foam, Caustics & Near-Beach Underwater Ecosystem
 import * as THREE from '../three.js';
 import { TextureGenerator } from './TextureGenerator.js';
 
 export class Ocean {
-  constructor(scene, size = 1400) {
+  constructor(scene, size = 1500) {
     this.scene = scene;
     this.size = size;
     this.waterLevel = 0.0;
@@ -11,16 +11,23 @@ export class Ocean {
     this.material = null;
     this.time = 0;
 
+    // Dedicated Shoreline Surf Foam Ring
+    this.shorelineFoamMesh = null;
+    this.shorelineFoamMat = null;
+
     // Underwater Scenery Elements
     this.underwaterGroup = new THREE.Group();
+    this.underwaterGroup.name = 'underwater-ecosystem';
     this.fishList = [];
+    this.kelpPositions = [];
 
     this.init();
+    this.createShorelineFoamRing();
     this.createUnderwaterScenery();
   }
 
   init() {
-    const segments = 160;
+    const segments = 180;
     const geometry = new THREE.PlaneGeometry(this.size, this.size, segments, segments);
     geometry.rotateX(-Math.PI / 2);
 
@@ -97,7 +104,6 @@ export class Ocean {
         uniform sampler2D uCausticsTex;
         uniform vec3 uSunDirection;
         uniform vec3 uSunColor;
-
         varying vec3 vWorldPosition;
         varying vec3 vNormal;
         varying float vWaveHeight;
@@ -110,34 +116,34 @@ export class Ocean {
           // Fresnel reflectance
           float fresnel = dot(viewDir, norm);
           fresnel = clamp(1.0 - fresnel, 0.0, 1.0);
-          fresnel = pow(fresnel, 2.5);
+          fresnel = pow(fresnel, 2.4);
 
           // Sun Specular reflection
           vec3 halfVector = normalize(uSunDirection + viewDir);
           float spec = max(0.0, dot(norm, halfVector));
-          spec = pow(spec, 110.0) * 1.8;
+          spec = pow(spec, 115.0) * 1.9;
 
           // Depth-based tropical color blend
           float dist = length(vWorldPosition.xz);
-          float depthFactor = clamp((dist - 130.0) / 110.0, 0.0, 1.0);
+          float depthFactor = clamp((dist - 120.0) / 125.0, 0.0, 1.0);
           vec3 waterColor = mix(uShallowWaterColor, uDeepWaterColor, depthFactor);
 
           // Animated Caustics in shallow waters
-          if (depthFactor < 0.8) {
+          if (depthFactor < 0.85) {
             vec2 causticsUv = vWorldPosition.xz * 0.05 + vec2(uTime * 0.02, uTime * 0.015);
             float caustics = texture2D(uCausticsTex, causticsUv).r;
-            waterColor += vec3(0.12, 0.22, 0.25) * caustics * (1.0 - depthFactor);
+            waterColor += vec3(0.12, 0.24, 0.28) * caustics * (1.0 - depthFactor);
           }
 
-          // Shoreline & Crest foam
-          float foamMask = smoothstep(0.24, 0.38, vWaveHeight);
-          waterColor = mix(waterColor, uFoamColor, foamMask * 0.7);
+          // Wave crest foam
+          float foamMask = smoothstep(0.22, 0.36, vWaveHeight);
+          waterColor = mix(waterColor, uFoamColor, foamMask * 0.65);
 
           // Final color composition with specular glints
-          vec3 finalColor = mix(waterColor, uDeepWaterColor * 1.4, fresnel * 0.45) + uSunColor * spec;
+          vec3 finalColor = mix(waterColor, uDeepWaterColor * 1.35, fresnel * 0.42) + uSunColor * spec;
 
           // Water transparency
-          float alpha = mix(0.78, 0.94, depthFactor);
+          float alpha = mix(0.76, 0.94, depthFactor);
           gl_FragColor = vec4(finalColor, alpha);
         }
       `,
@@ -149,13 +155,60 @@ export class Ocean {
     this.scene.add(this.mesh);
   }
 
-  // --- Underwater Coral Reefs, Kelp & Tropical Fish ---
+  // Dedicated Animated Shoreline Foam Band along beach contours
+  createShorelineFoamRing() {
+    const foamTex = TextureGenerator.createShoreFoamTexture();
+    const ringGeo = new THREE.RingGeometry(110, 220, 64, 4);
+    ringGeo.rotateX(-Math.PI / 2);
+
+    this.shorelineFoamMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uFoamTex: { value: foamTex }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+        void main() {
+          vUv = uv;
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPos = worldPos.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform sampler2D uFoamTex;
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+
+        void main() {
+          // Lapping tide wave animation
+          float tidePulse = sin(uTime * 1.5 - vUv.x * 20.0) * 0.5 + 0.5;
+          vec2 uv = vUv * vec2(16.0, 4.0) + vec2(uTime * 0.04, 0.0);
+          float foam = texture2D(uFoamTex, uv).r;
+
+          float edgeFade = smoothstep(0.0, 0.35, vUv.y) * smoothstep(1.0, 0.65, vUv.y);
+          float alpha = foam * tidePulse * edgeFade * 0.75;
+
+          gl_FragColor = vec4(1.0, 1.0, 1.0, alpha);
+        }
+      `,
+      transparent: true,
+      depthWrite: false
+    });
+
+    this.shorelineFoamMesh = new THREE.Mesh(ringGeo, this.shorelineFoamMat);
+    this.shorelineFoamMesh.position.y = this.waterLevel + 0.08;
+    this.scene.add(this.shorelineFoamMesh);
+  }
+
+  // --- Rich Underwater Coral Reefs, Kelp, Shells & Tropical Fish ---
   createUnderwaterScenery() {
     this.scene.add(this.underwaterGroup);
 
-    // 1. Instanced Brain & Staghorn Corals in Shallow Reef (radius 140 - 210)
-    const coralCount = 120;
-    const coralColors = [0xff4081, 0xff9100, 0x00e676, 0x7c4dff, 0x00b0ff];
+    const coralCount = 140;
+    const coralColors = [0xff4081, 0xff9100, 0x00e676, 0x7c4dff, 0x00b0ff, 0xffeb3b];
 
     // Brain Coral Geometry (spherical corrugated domes)
     const brainGeo = new THREE.DodecahedronGeometry(1.2, 1);
@@ -180,15 +233,16 @@ export class Ocean {
 
     for (let i = 0; i < coralCount / 2; i++) {
       const angle = (i / (coralCount / 2)) * Math.PI * 2 + Math.random() * 0.2;
-      const r = 145 + Math.random() * 55;
+      // Corals from shallow reef (90m) out to barrier reef (220m)
+      const r = 90 + Math.random() * 110;
       const x = Math.cos(angle) * r;
       const z = Math.sin(angle) * r;
-      const y = -1.8 - Math.random() * 2.5;
+      const y = -1.2 - Math.random() * 3.0;
 
       // Brain coral
       dummy.position.set(x, y, z);
-      const s1 = 0.8 + Math.random() * 0.7;
-      dummy.scale.set(s1, s1 * 0.7, s1);
+      const s1 = 0.75 + Math.random() * 0.75;
+      dummy.scale.set(s1, s1 * 0.68, s1);
       dummy.rotation.set(0, Math.random() * Math.PI, 0);
       dummy.updateMatrix();
       brainInstanced.setMatrixAt(i, dummy.matrix);
@@ -197,7 +251,7 @@ export class Ocean {
 
       // Staghorn coral cluster
       dummy.position.set(x + 2, y + 0.3, z + 2);
-      const s2 = 0.9 + Math.random() * 0.8;
+      const s2 = 0.85 + Math.random() * 0.85;
       dummy.scale.set(s2, s2, s2);
       dummy.rotation.set((Math.random() - 0.5) * 0.4, Math.random() * Math.PI, (Math.random() - 0.5) * 0.4);
       dummy.updateMatrix();
@@ -216,7 +270,7 @@ export class Ocean {
 
     // 2. Underwater Seagrass / Kelp Tufts
     const kelpCount = 180;
-    const kelpGeo = new THREE.CylinderGeometry(0.04, 0.1, 2.4, 4);
+    const kelpGeo = new THREE.CylinderGeometry(0.04, 0.1, 2.6, 4);
     const kelpMat = new THREE.MeshStandardMaterial({
       color: 0x1b5e20,
       roughness: 0.6,
@@ -227,13 +281,13 @@ export class Ocean {
     this.kelpPositions = [];
     for (let i = 0; i < kelpCount; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const r = 140 + Math.random() * 65;
+      const r = 85 + Math.random() * 115;
       const x = Math.cos(angle) * r;
       const z = Math.sin(angle) * r;
-      const y = -1.2 - Math.random() * 2.5;
+      const y = -1.1 - Math.random() * 2.8;
 
       dummy.position.set(x, y, z);
-      dummy.scale.set(1.0, 0.8 + Math.random() * 0.6, 1.0);
+      dummy.scale.set(1.0, 0.85 + Math.random() * 0.65, 1.0);
       dummy.rotation.set((Math.random() - 0.5) * 0.2, Math.random() * Math.PI, 0);
       dummy.updateMatrix();
       this.kelpInstanced.setMatrixAt(i, dummy.matrix);
@@ -243,13 +297,56 @@ export class Ocean {
     this.kelpInstanced.instanceMatrix.needsUpdate = true;
     this.underwaterGroup.add(this.kelpInstanced);
 
-    // 3. Schools of Tropical Reef Fish (Clownfish & Blue Tangs)
+    // 3. Near-Beach Shallow Seabed Elements: Sea Shells & Starfish
+    this.createNearBeachSeabedDetails();
+
+    // 4. Schools of Tropical Reef Fish
     this.createFishSchools();
+  }
+
+  // Sea Shells & Starfish on shallow sandbars near the beach (radius 60 - 130m)
+  createNearBeachSeabedDetails() {
+    const shellGeo = new THREE.ConeGeometry(0.18, 0.35, 5);
+    const shellMat = new THREE.MeshStandardMaterial({ color: 0xffe0b2, roughness: 0.7 });
+    const starfishGeo = new THREE.DodecahedronGeometry(0.24, 0);
+    const starfishMat = new THREE.MeshStandardMaterial({ color: 0xff5722, roughness: 0.8 });
+
+    const count = 45;
+    const shellInstanced = new THREE.InstancedMesh(shellGeo, shellMat, count);
+    const starfishInstanced = new THREE.InstancedMesh(starfishGeo, starfishMat, count);
+    const dummy = new THREE.Object3D();
+
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = 65 + Math.random() * 65; // Close to beach!
+      const x = Math.cos(angle) * r;
+      const z = Math.sin(angle) * r;
+
+      // Shells
+      dummy.position.set(x, -0.6 - Math.random() * 0.8, z);
+      dummy.rotation.set(Math.PI / 2, Math.random() * Math.PI, 0);
+      dummy.scale.set(1, 0.45, 1);
+      dummy.updateMatrix();
+      shellInstanced.setMatrixAt(i, dummy.matrix);
+
+      // Starfish
+      dummy.position.set(x + 2, -0.65 - Math.random() * 0.8, z + 2);
+      dummy.rotation.set(0, Math.random() * Math.PI, 0);
+      dummy.scale.set(1.2, 0.3, 1.2);
+      dummy.updateMatrix();
+      starfishInstanced.setMatrixAt(i, dummy.matrix);
+    }
+
+    shellInstanced.instanceMatrix.needsUpdate = true;
+    starfishInstanced.instanceMatrix.needsUpdate = true;
+
+    this.underwaterGroup.add(shellInstanced);
+    this.underwaterGroup.add(starfishInstanced);
   }
 
   createFishSchools() {
     const fishGroup = new THREE.Group();
-    const fishCount = 32;
+    const fishCount = 36;
 
     const fishMatOrange = new THREE.MeshStandardMaterial({ color: 0xff6d00, roughness: 0.4 });
     const fishMatBlue = new THREE.MeshStandardMaterial({ color: 0x0288d1, roughness: 0.4 });
@@ -259,33 +356,33 @@ export class Ocean {
       const fish = new THREE.Group();
 
       // Fish body
-      const bodyGeo = new THREE.ConeGeometry(0.12, 0.42, 6);
+      const bodyGeo = new THREE.ConeGeometry(0.13, 0.44, 6);
       bodyGeo.rotateZ(Math.PI / 2);
       const mat = (i % 3 === 0) ? fishMatOrange : (i % 3 === 1 ? fishMatBlue : fishMatYellow);
       const body = new THREE.Mesh(bodyGeo, mat);
       fish.add(body);
 
       // Tail fin
-      const finGeo = new THREE.ConeGeometry(0.08, 0.18, 3);
+      const finGeo = new THREE.ConeGeometry(0.08, 0.20, 3);
       finGeo.rotateZ(-Math.PI / 2);
       const fin = new THREE.Mesh(finGeo, mat);
-      fin.position.set(-0.25, 0, 0);
+      fin.position.set(-0.26, 0, 0);
       fish.add(fin);
 
-      // Position in schools around the coral reef
-      const schoolId = i % 4;
-      const baseAngle = (schoolId / 4) * Math.PI * 2;
-      const r = 150 + Math.random() * 30;
+      // Position in schools near the beach and shallow reefs
+      const schoolId = i % 5;
+      const baseAngle = (schoolId / 5) * Math.PI * 2;
+      const r = 85 + Math.random() * 85;
       fish.position.set(
         Math.cos(baseAngle) * r + (Math.random() - 0.5) * 8,
-        -1.2 - Math.random() * 1.5,
+        -0.9 - Math.random() * 1.8,
         Math.sin(baseAngle) * r + (Math.random() - 0.5) * 8
       );
 
       fish.userData = {
         baseAngle: baseAngle,
         radius: r,
-        orbitSpeed: 0.15 + (Math.random() - 0.5) * 0.05,
+        orbitSpeed: 0.16 + (Math.random() - 0.5) * 0.05,
         phase: Math.random() * 10,
         fin: fin
       };
@@ -323,24 +420,28 @@ export class Ocean {
       }
     }
 
+    if (this.shorelineFoamMat && this.shorelineFoamMat.uniforms) {
+      this.shorelineFoamMat.uniforms.uTime.value = this.time;
+    }
+
     // Animate tropical reef fish swimming
     for (let fish of this.fishList) {
       const d = fish.userData;
-      d.baseAngle += d.orbitSpeed * delta * 0.4;
+      d.baseAngle += d.orbitSpeed * delta * 0.42;
       const x = Math.cos(d.baseAngle) * d.radius;
       const z = Math.sin(d.baseAngle) * d.radius;
-      const waveY = Math.sin(this.time * 2 + d.phase) * 0.25;
+      const waveY = Math.sin(this.time * 2.2 + d.phase) * 0.22;
 
       fish.position.x = x;
       fish.position.z = z;
-      fish.position.y = -1.6 + waveY;
+      fish.position.y = -1.4 + waveY;
 
       // Point in direction of motion (tangent to circle)
       fish.rotation.y = -d.baseAngle + Math.PI / 2;
 
       // Wag tail fin
       if (d.fin) {
-        d.fin.rotation.y = Math.sin(this.time * 12 + d.phase) * 0.45;
+        d.fin.rotation.y = Math.sin(this.time * 14 + d.phase) * 0.48;
       }
     }
   }

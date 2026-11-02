@@ -7,8 +7,11 @@ export const ISLANDS_REGISTRY = [
     name: 'Isla de la Esperanza',
     title: 'Starting Sanctuary',
     coordinates: { x: 0, y: 0, z: 0 },
-    radius: 300,
-    biome: 'Tropical Atoll & Jungle',
+    radius: 320,
+    difficulty: 'Normal',
+    biome: 'Tropical Atoll & Mountain Jungle',
+    resources: ['Palm Wood', 'Coconut', 'Flint', 'Fresh Water', 'Wild Berries', 'Fiber'],
+    landmarks: ['Crashed Airplane Wreck', 'Freshwater Lagoon', 'Hidden Crystal Cave', 'Central Volcanic Ridge'],
     description: 'Stranded sanctuary with golden beaches, fresh lagoon, coconut palms, and the downed aircraft debris.',
     isLoaded: true,
     isCurrent: true
@@ -18,8 +21,11 @@ export const ISLANDS_REGISTRY = [
     name: 'Isla Esmeralda',
     title: 'Emerald Rainforest Peak',
     coordinates: { x: 520, y: 0, z: -420 },
-    radius: 240,
-    biome: 'Mountainous Rainforest',
+    radius: 260,
+    difficulty: 'Challenging',
+    biome: 'Mountainous Cloud Forest',
+    resources: ['Hardwood Timber', 'Medicinal Herbs', 'Rare Feathers', 'Granite'],
+    landmarks: ['Emerald Peak Summit', 'Twin Waterfalls', 'Misty Ravine'],
     description: 'A towering emerald peak cloaked in persistent trade wind mists, rich with hardwood and rare fauna.',
     isLoaded: false,
     isCurrent: false
@@ -30,7 +36,10 @@ export const ISLANDS_REGISTRY = [
     title: 'Basalt Caldera',
     coordinates: { x: -580, y: 0, z: -360 },
     radius: 280,
+    difficulty: 'Severe',
     biome: 'Volcanic Crags & Basalt',
+    resources: ['Obsidian Shards', 'Sulfur', 'Black Sand', 'Iron Ore'],
+    landmarks: ['Active Smoldering Caldera', 'Basalt Columns', 'Sulfur Geysers'],
     description: 'Dark volcanic shores of obsidian and sulfur, dominated by a smoldering caldera peak.',
     isLoaded: false,
     isCurrent: false
@@ -40,8 +49,11 @@ export const ISLANDS_REGISTRY = [
     name: 'Cayo Coral',
     title: 'Turquoise Coral Atoll',
     coordinates: { x: 480, y: 0, z: 480 },
-    radius: 220,
+    radius: 240,
+    difficulty: 'Easy',
     biome: 'Coral Reefs & White Sands',
+    resources: ['Giant Clams', 'Coral Shards', 'White Sand', 'Tropical Fish'],
+    landmarks: ['Sunken Blue Hole', 'Staghorn Barrier Reef', 'Powder Sandbar'],
     description: 'Shallow turquoise lagoons protected by vibrant coral barriers and low powder-sand cayos.',
     isLoaded: false,
     isCurrent: false
@@ -51,8 +63,11 @@ export const ISLANDS_REGISTRY = [
     name: 'Isla Naufragio',
     title: 'Shipwreck Reef',
     coordinates: { x: -460, y: 0, z: 520 },
-    radius: 260,
-    biome: 'Sea Stacks & Wreckage',
+    radius: 270,
+    difficulty: 'Hard',
+    biome: 'Jagged Sea Stacks & Wreckage',
+    resources: ['Salvaged Ship Timber', 'Iron Cannons', 'Ancient Gold Coins', 'Rope'],
+    landmarks: ['17th-Century Galleon Hull', 'Siren Sea Stacks', 'Smugglers Cove'],
     description: 'Treacherous sea stacks surrounded by jagged rocks where a 17th-century galleon was lost.',
     isLoaded: false,
     isCurrent: false
@@ -76,6 +91,9 @@ export class WorldManager {
 
     this.animTime = 0;
     this.smokeParticles = null;
+
+    // Callbacks
+    this.onIslandEnter = null;
 
     this.initArchipelagoPlaceholders();
   }
@@ -221,6 +239,58 @@ export class WorldManager {
     return this.islands;
   }
 
+  // Detect which island territory a coordinate is within
+  getIslandAt(x, z) {
+    for (let isl of this.islands) {
+      const dx = isl.coordinates.x - x;
+      const dz = isl.coordinates.z - z;
+      const dist = Math.hypot(dx, dz);
+      if (dist <= isl.radius) {
+        return isl;
+      }
+    }
+    return null; // In open ocean waters
+  }
+
+  // Check closest island to given coordinates and distance
+  getClosestIsland(x, z) {
+    let closest = this.islands[0];
+    let minDist = Infinity;
+
+    for (let isl of this.islands) {
+      const dx = isl.coordinates.x - x;
+      const dz = isl.coordinates.z - z;
+      const dist = Math.hypot(dx, dz);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = isl;
+      }
+    }
+
+    return { island: closest, distance: minDist };
+  }
+
+  // Calculate compass bearings and distances to all 5 archipelago islands
+  getArchipelagoNavData(playerX, playerZ) {
+    return this.islands.map(isl => {
+      const dx = isl.coordinates.x - playerX;
+      const dz = isl.coordinates.z - playerZ;
+      const dist = Math.round(Math.hypot(dx, dz));
+      const rad = Math.atan2(dx, -dz);
+      let deg = Math.round((rad * 180) / Math.PI);
+      if (deg < 0) deg += 360;
+
+      return {
+        id: isl.id,
+        name: isl.name,
+        title: isl.title,
+        distance: dist,
+        bearingDeg: deg,
+        isCurrent: isl.id === this.currentIslandId
+      };
+    });
+  }
+
   // Load an island environment
   loadIsland(islandId) {
     const target = this.islands.find(isl => isl.id === islandId);
@@ -234,6 +304,10 @@ export class WorldManager {
     });
     this.currentIslandId = islandId;
     target.isLoaded = true;
+
+    if (this.onIslandEnter) {
+      this.onIslandEnter(target);
+    }
 
     console.log(`🏝️ WorldManager: Loaded ${target.name} (${target.title})`);
     return true;
@@ -252,24 +326,6 @@ export class WorldManager {
     }
   }
 
-  // Check closest island to given coordinates
-  getClosestIsland(x, z) {
-    let closest = this.islands[0];
-    let minDist = Infinity;
-
-    for (let isl of this.islands) {
-      const dx = isl.coordinates.x - x;
-      const dz = isl.coordinates.z - z;
-      const dist = Math.hypot(dx, dz);
-      if (dist < minDist) {
-        minDist = dist;
-        closest = isl;
-      }
-    }
-
-    return { island: closest, distance: minDist };
-  }
-
   // Frame update
   update(delta, playerPos) {
     this.animTime += delta;
@@ -279,6 +335,14 @@ export class WorldManager {
       const scale = 1.0 + Math.sin(this.animTime * 1.5) * 0.12;
       this.smokeParticles.scale.set(scale, scale * 1.3, scale);
       this.smokeParticles.position.y = 92 + Math.sin(this.animTime * 0.8) * 3;
+    }
+
+    // Check if player entered a new island territory
+    if (playerPos) {
+      const detectedIsland = this.getIslandAt(playerPos.x, playerPos.z);
+      if (detectedIsland && detectedIsland.id !== this.currentIslandId) {
+        this.loadIsland(detectedIsland.id);
+      }
     }
   }
 }

@@ -14,19 +14,41 @@ export class FloraModels {
     return { bark: this.barkTex || null, leaf: this.leafTex || null };
   }
 
-  // 1. Large Majestic Tropical Coconut Palm Tree
+  // 1. Large Majestic Tropical Coconut Palm Tree with Varied Sizes
   static createPalmTree(variant = 'tall') {
     const group = new THREE.Group();
     const tex = this.getTextures();
 
-    let height = 13.5 + Math.random() * 4.0;
-    let lean = 2.8 + Math.random() * 2.2;
-    if (variant === 'leaning') {
-      lean = 5.2 + Math.random() * 2.0;
-      height = 11.0 + Math.random() * 2.5;
-    } else if (variant === 'young') {
-      height = 7.5 + Math.random() * 2.0;
-      lean = 1.2;
+    let height = 12.5 + Math.random() * 3.5;
+    let lean = 2.6 + Math.random() * 2.0;
+    let trunkRadius = 0.50;
+    let frondCount = 16;
+    let nutCount = 4;
+
+    if (variant === 'king') {
+      height = 16.0 + Math.random() * 3.5;
+      lean = 2.2 + Math.random() * 1.8;
+      trunkRadius = 0.65;
+      frondCount = 20;
+      nutCount = 6;
+    } else if (variant === 'leaning') {
+      lean = 5.6 + Math.random() * 2.2;
+      height = 10.5 + Math.random() * 2.2;
+      trunkRadius = 0.48;
+      frondCount = 14;
+      nutCount = 4;
+    } else if (variant === 'dwarf') {
+      height = 5.5 + Math.random() * 1.8;
+      lean = 1.0 + Math.random() * 0.8;
+      trunkRadius = 0.35;
+      frondCount = 12;
+      nutCount = 3;
+    } else if (variant === 'sapling') {
+      height = 3.2 + Math.random() * 1.2;
+      lean = 0.5;
+      trunkRadius = 0.22;
+      frondCount = 8;
+      nutCount = 0;
     }
 
     const leanAngle = Math.random() * Math.PI * 2;
@@ -43,7 +65,7 @@ export class FloraModels {
     }
 
     const curve = new THREE.CatmullRomCurve3(curvePoints);
-    const trunkGeo = new THREE.TubeGeometry(curve, 20, 0.52, 10, false);
+    const trunkGeo = new THREE.TubeGeometry(curve, 20, trunkRadius, 10, false);
 
     const trunkMat = new THREE.MeshStandardMaterial({
       color: 0x82644d,
@@ -58,7 +80,7 @@ export class FloraModels {
     group.add(trunkMesh);
 
     // Root flare at base
-    const rootGeo = new THREE.CylinderGeometry(0.55, 0.85, 0.8, 8);
+    const rootGeo = new THREE.CylinderGeometry(trunkRadius * 1.05, trunkRadius * 1.6, 0.8, 8);
     const rootMesh = new THREE.Mesh(rootGeo, trunkMat);
     rootMesh.position.y = 0.4;
     group.add(rootMesh);
@@ -75,7 +97,6 @@ export class FloraModels {
       side: THREE.DoubleSide
     });
 
-    const frondCount = 14 + Math.floor(Math.random() * 4);
     for (let i = 0; i < frondCount; i++) {
       const angle = (i / frondCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.15;
       const frondMesh = this.createDetailedFrond(frondMat, height);
@@ -85,29 +106,30 @@ export class FloraModels {
       frondGroup.add(frondMesh);
     }
 
-    // Cluster of 4-6 Ripe Coconuts on Crown
-    const coconutMat = new THREE.MeshStandardMaterial({
-      color: 0x543d2b,
-      roughness: 0.75
-    });
-    const coconutGeo = new THREE.DodecahedronGeometry(0.35, 1);
-    const nutCount = 4 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < nutCount; i++) {
-      const nut = new THREE.Mesh(coconutGeo, coconutMat);
-      const a = (i / nutCount) * Math.PI * 2;
-      nut.position.set(Math.cos(a) * 0.48, -0.35 - Math.random() * 0.2, Math.sin(a) * 0.48);
-      nut.castShadow = true;
-      frondGroup.add(nut);
+    // Cluster of Ripe Coconuts on Crown
+    if (nutCount > 0) {
+      const coconutMat = new THREE.MeshStandardMaterial({
+        color: 0x543d2b,
+        roughness: 0.75
+      });
+      const coconutGeo = new THREE.DodecahedronGeometry(trunkRadius * 0.65, 1);
+      for (let i = 0; i < nutCount; i++) {
+        const nut = new THREE.Mesh(coconutGeo, coconutMat);
+        const a = (i / nutCount) * Math.PI * 2;
+        nut.position.set(Math.cos(a) * (trunkRadius * 0.95), -0.35 - Math.random() * 0.2, Math.sin(a) * (trunkRadius * 0.95));
+        nut.castShadow = true;
+        frondGroup.add(nut);
+      }
     }
 
     group.add(frondGroup);
 
     group.userData = {
       type: 'palm_tree',
-      name: 'Coconut Palm',
-      maxHealth: 80,
-      health: 80,
-      resourceYield: { wood: 4, leaves: 3, coconut: 2 },
+      name: variant === 'king' ? 'King Coconut Palm' : (variant === 'dwarf' ? 'Dwarf Beach Palm' : 'Coconut Palm'),
+      maxHealth: variant === 'king' ? 120 : (variant === 'dwarf' ? 50 : 80),
+      health: variant === 'king' ? 120 : (variant === 'dwarf' ? 50 : 80),
+      resourceYield: { wood: variant === 'king' ? 6 : (variant === 'dwarf' ? 2 : 4), leaves: 3, coconut: nutCount > 0 ? 2 : 0 },
       toolCategory: 'axe',
       height: height,
       frondGroup: frondGroup
@@ -520,6 +542,125 @@ export class FloraModels {
       resourceYield: { fiber: 3, leaves: 3, berries: 2 },
       isDirectPickup: true,
       pickupPrompt: '[E] Harvest Foliage & Berries'
+    };
+
+    return group;
+  }
+
+  // 11. Wild Tropical Banana Palm Tree
+  static createWildBananaTree() {
+    const group = new THREE.Group();
+    const height = 4.2 + Math.random() * 1.2;
+
+    // Green fleshy pseudostem trunk
+    const stemGeo = new THREE.CylinderGeometry(0.24, 0.36, height, 8);
+    const stemMat = new THREE.MeshStandardMaterial({ color: 0x689f38, roughness: 0.7 });
+    const stem = new THREE.Mesh(stemGeo, stemMat);
+    stem.position.y = height / 2;
+    stem.castShadow = true;
+    group.add(stem);
+
+    // Large broad paddle leaves
+    const leafCount = 7;
+    const leafMat = new THREE.MeshStandardMaterial({
+      color: 0x43a047,
+      roughness: 0.55,
+      side: THREE.DoubleSide
+    });
+
+    for (let i = 0; i < leafCount; i++) {
+      const angle = (i / leafCount) * Math.PI * 2;
+      const leafGeo = new THREE.ConeGeometry(0.75, 3.2, 4);
+      leafGeo.rotateX(Math.PI / 2.2);
+      const leaf = new THREE.Mesh(leafGeo, leafMat);
+      leaf.position.set(0, height * 0.95, 0);
+      leaf.rotation.y = angle;
+      leaf.scale.set(1.0, 0.05, 1.0);
+      leaf.castShadow = true;
+      group.add(leaf);
+    }
+
+    // Hanging banana fruit stem
+    const fruitGeo = new THREE.SphereGeometry(0.3, 5, 5);
+    const fruitMat = new THREE.MeshStandardMaterial({ color: 0xffd600, roughness: 0.6 });
+    const fruit = new THREE.Mesh(fruitGeo, fruitMat);
+    fruit.position.set(0.3, height * 0.82, 0.3);
+    fruit.scale.set(0.8, 1.4, 0.8);
+    group.add(fruit);
+
+    group.userData = {
+      type: 'banana_tree',
+      name: 'Wild Banana Tree',
+      maxHealth: 45,
+      health: 45,
+      resourceYield: { fiber: 4, leaves: 3, banana: 3 },
+      toolCategory: 'axe'
+    };
+
+    return group;
+  }
+
+  // 12. Giant Mountain & Coastal Cliff Rock Face
+  static createCliffRockFace() {
+    const group = new THREE.Group();
+    const w = 6.5 + Math.random() * 3.5;
+    const h = 5.0 + Math.random() * 4.0;
+    const d = 4.0 + Math.random() * 2.5;
+
+    const rockGeo = new THREE.DodecahedronGeometry(w * 0.5, 1);
+    const rockMat = new THREE.MeshStandardMaterial({
+      color: 0x4a443e,
+      roughness: 0.92,
+      metalness: 0.08,
+      flatShading: true
+    });
+
+    const mesh = new THREE.Mesh(rockGeo, rockMat);
+    mesh.scale.set(1.2, h / (w * 0.5), d / (w * 0.5));
+    mesh.position.y = h * 0.45;
+    mesh.rotation.set((Math.random() - 0.5) * 0.3, Math.random() * Math.PI, (Math.random() - 0.5) * 0.3);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+
+    group.userData = {
+      type: 'rock_node',
+      name: 'Basalt Cliff Crag',
+      maxHealth: 150,
+      health: 150,
+      resourceYield: { stone: 8, flint: 3 },
+      toolCategory: 'pickaxe'
+    };
+
+    return group;
+  }
+
+  // 13. Slender Bamboo Grove
+  static createBambooGrove() {
+    const group = new THREE.Group();
+    const stalkCount = 6;
+    const bambooMat = new THREE.MeshStandardMaterial({ color: 0x7cb342, roughness: 0.6 });
+    const stalkGeo = new THREE.CylinderGeometry(0.06, 0.08, 8.5, 6);
+
+    for (let i = 0; i < stalkCount; i++) {
+      const stalk = new THREE.Mesh(stalkGeo, bambooMat);
+      stalk.position.set(
+        (Math.random() - 0.5) * 1.8,
+        4.25,
+        (Math.random() - 0.5) * 1.8
+      );
+      stalk.rotation.set((Math.random() - 0.5) * 0.1, 0, (Math.random() - 0.5) * 0.1);
+      stalk.castShadow = true;
+      group.add(stalk);
+    }
+
+    group.userData = {
+      type: 'bamboo',
+      name: 'Bamboo Grove',
+      maxHealth: 50,
+      health: 50,
+      resourceYield: { wood: 4, fiber: 4 },
+      toolCategory: 'axe'
     };
 
     return group;

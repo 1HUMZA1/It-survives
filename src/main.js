@@ -93,15 +93,15 @@ class Game {
     // 2. Dynamic Atmosphere & Day/Night Cycle
     this.timeWeather = new TimeWeatherManager(this.scene, this.renderer);
 
-    // 3. Tropical Island Terrain
-    this.terrain = new IslandTerrain(this.scene, 600, 160);
+    // 3. Tropical Island Terrain (Upgraded 720m high-elevation terrain)
+    this.terrain = new IslandTerrain(this.scene, 720, 220);
 
-    // 4. Animated Tropical Ocean
-    this.ocean = new Ocean(this.scene, 1400);
+    // 4. Animated Tropical Ocean with Surf Foam & Underwater Ecosystem
+    this.ocean = new Ocean(this.scene, 1500);
 
-    // 5. Procedural Foliage, Palm Trees, Boulders & Bushes
+    // 5. Procedural Foliage, Varied Palms, Banyan Canopy Trees, Bamboo & Undergrowth
     this.foliage = new FoliageManager(this.scene, this.terrain);
-    this.foliage.generateFoliage(360);
+    this.foliage.generateFoliage(560);
 
     // 6. Stranded Plane Crash Site
     this.crashSite = new CrashSite(this.scene, this.terrain, 50, 70);
@@ -126,6 +126,9 @@ class Game {
       this.crashSite,
       this.wildlife
     );
+    this.worldManager.onIslandEnter = (island) => {
+      this.hud.addNotification(`🏝️ Approaching ${island.name} - ${island.title}`);
+    };
   }
 
   initPlayerAndSystems() {
@@ -137,7 +140,7 @@ class Game {
 
     // 3. Camera Controller (First-Person & Third-Person with smooth switching & collision)
     this.cameraController = new CameraController(this.camera, this.scene, this.terrain);
-    this.cameraController.setCollidableObjects([this.terrain.mesh]);
+    this.cameraController.setCollidableObjects([this.terrain.mesh, this.terrain.coastalRocksGroup]);
 
     // 4. Player Controller
     this.player = new Player(
