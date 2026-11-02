@@ -100,7 +100,8 @@ export class MainMenu {
                   <li><kbd>Right Click</kbd> - Eat / Drink in hand | Cancel build</li>
                   <li><kbd>E</kbd> - Contextual interact (Scavenge, Cook, Sleep, Drink)</li>
                   <li><kbd>Tab</kbd> / <kbd>I</kbd> - Open Backpack & Crafting</li>
-                  <li><kbd>1</kbd> - <kbd>6</kbd> - Select Hotbar Item</li>
+                  <li><kbd>1</kbd> - <kbd>5</kbd> - Select Hotbar Item</li>
+                  <li><kbd>C</kbd> - Switch Camera Perspective (FPS / TPS)</li>
                   <li><kbd>B</kbd> - Open Construction Blueprint</li>
                   <li><kbd>R</kbd> - Rotate building hologram</li>
                   <li><kbd>Esc</kbd> - Pause Menu</li>

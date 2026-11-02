@@ -2,11 +2,11 @@
 import { ITEMS, RECIPES } from './ItemDefinitions.js';
 
 export class Inventory {
-  constructor(backpackSize = 24, hotbarSize = 6) {
+  constructor(backpackSize = 24, hotbarSize = 5) {
     this.backpackSize = backpackSize;
     this.hotbarSize = hotbarSize;
 
-    // Slots array (0..5 = hotbar, 6..29 = backpack)
+    // Slots array (0..4 = hotbar, 5..28 = backpack)
     this.slots = new Array(hotbarSize + backpackSize).fill(null);
     this.selectedHotbarIndex = 0;
 

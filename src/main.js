@@ -1,6 +1,8 @@
 // ISLAND SURVIVAL - Main Game Entry & Game Loop
 import * as THREE from './three.js';
 import { InputManager } from './core/InputManager.js';
+import { CameraController } from './core/CameraController.js';
+import { physicsManager } from './core/PhysicsManager.js';
 import { audio } from './core/AudioManager.js';
 import { SaveManager } from './core/SaveManager.js';
 import { TimeWeatherManager } from './core/TimeWeatherManager.js';
@@ -8,6 +10,7 @@ import { IslandTerrain } from './world/Terrain.js';
 import { Ocean } from './world/Ocean.js';
 import { FoliageManager } from './world/FoliageManager.js';
 import { CrashSite } from './world/CrashSite.js';
+import { WorldManager } from './world/WorldManager.js';
 import { WildlifeManager } from './entities/Wildlife.js';
 import { Inventory } from './items/Inventory.js';
 import { BuildingSystem, BUILDING_PIECES } from './building/BuildingSystem.js';
@@ -44,6 +47,7 @@ class Game {
     this.initPlayerAndSystems();
     this.initUI();
     this.bindEvents();
+    this.initPhysics();
 
     this.animate();
   }
@@ -113,24 +117,48 @@ class Game {
       boars: 6,
       crabs: 10
     });
+
+    // 8. 5-Island World Architecture & Distant Horizon Placeholders
+    this.worldManager = new WorldManager(
+      this.scene,
+      this.terrain,
+      this.foliage,
+      this.crashSite,
+      this.wildlife
+    );
   }
 
   initPlayerAndSystems() {
-    // 1. Inventory
-    this.inventory = new Inventory(24, 6);
+    // 1. Inventory (5 Hotbar slots, 24 Backpack slots)
+    this.inventory = new Inventory(24, 5);
 
     // 2. Base Construction System
     this.building = new BuildingSystem(this.scene, this.terrain, this.inventory, audio);
 
-    // 3. Player Controller
+    // 3. Camera Controller (First-Person & Third-Person with smooth switching & collision)
+    this.cameraController = new CameraController(this.camera, this.scene, this.terrain);
+    this.cameraController.setCollidableObjects([this.terrain.mesh]);
+
+    // 4. Player Controller
     this.player = new Player(
       this.camera,
       this.scene,
       this.terrain,
       this.ocean,
       this.inventory,
-      audio
+      audio,
+      this.cameraController
     );
+  }
+
+  async initPhysics() {
+    await physicsManager.init();
+    if (physicsManager.isReady) {
+      physicsManager.createPlayer(this.player.position);
+      if (this.terrain && this.terrain.mesh) {
+        physicsManager.createTrimeshCollider(this.terrain.mesh.geometry, this.terrain.mesh.position);
+      }
+    }
   }
 
   initUI() {
@@ -306,7 +334,31 @@ class Game {
       }
     };
 
-    // Hotbar & Construction Piece selection (Keys 1-7)
+    // 'C' Key camera perspective toggle (First-Person <-> Third-Person)
+    this.input.onCameraToggle = () => {
+      if (this.state === this.STATE_PLAYING) {
+        this.cameraController.toggleMode();
+      }
+    };
+
+    this.cameraController.onModeChange = (mode) => {
+      this.hud.updateCameraMode(mode);
+      audio.playUIClick();
+      this.hud.addNotification(
+        mode === 'TPS' ? '🎥 Switched to 3rd-Person Perspective' : '🎥 Switched to 1st-Person Perspective'
+      );
+    };
+
+    const camBadge = document.getElementById('hud-camera-badge');
+    if (camBadge) {
+      camBadge.addEventListener('click', () => {
+        if (this.state === this.STATE_PLAYING) {
+          this.cameraController.toggleMode();
+        }
+      });
+    }
+
+    // Hotbar & Construction Piece selection (Keys 1-5 for hotbar, 1-7 for build mode)
     this.input.onSlotSelect = (index) => {
       if (this.state === this.STATE_PLAYING) {
         if (this.hud.isBuildMode) {
@@ -316,7 +368,7 @@ class Game {
             this.hud.updateBuildBar(this.building, this.inventory);
             audio.playUIClick();
           }
-        } else if (index < 6) {
+        } else if (index < 5) {
           this.inventory.selectHotbarIndex(index);
           this.hud.updateHotbar(this.inventory);
           audio.playUIClick();
@@ -447,11 +499,11 @@ class Game {
         this.input.invertY
       );
 
-      // Mouse Wheel hotbar scroll
+      // Mouse Wheel hotbar scroll (5 slots)
       if (this.input.mouse.wheel !== 0) {
         let newIdx = this.inventory.selectedHotbarIndex + this.input.mouse.wheel;
-        if (newIdx < 0) newIdx = 5;
-        if (newIdx > 5) newIdx = 0;
+        if (newIdx < 0) newIdx = 4;
+        if (newIdx > 4) newIdx = 0;
         this.inventory.selectHotbarIndex(newIdx);
         this.hud.updateHotbar(this.inventory);
         audio.playUIClick();
@@ -485,6 +537,14 @@ class Game {
     this.wildlife.update(delta, this.player.position, (dmg, reason) => {
       this.player.takeDamage(dmg, reason);
     });
+
+    // Step Rapier 3D Physics Simulation
+    physicsManager.step(delta);
+
+    // Update Archipelago Horizons & World Manager
+    if (this.worldManager) {
+      this.worldManager.update(delta, this.player.position);
+    }
 
     // Update Ocean & Day/Night Atmosphere
     this.ocean.update(delta, this.timeWeather.sunDirection);

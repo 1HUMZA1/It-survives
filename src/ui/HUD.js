@@ -51,8 +51,13 @@ export class HUD {
         </div>
       </div>
 
-      <!-- Top Right: Notification Feed -->
+      <!-- Top Right: Notification Feed & Camera Mode Indicator -->
       <div class="hud-top-right">
+        <div id="hud-camera-badge" class="hud-camera-badge" title="Press C to switch camera perspective">
+          <span class="cam-icon">🎥</span>
+          <span id="hud-camera-mode-text">1ST PERSON</span>
+          <span class="cam-key">[C]</span>
+        </div>
         <div id="hud-notifications" class="notifications-feed"></div>
       </div>
 
@@ -150,7 +155,7 @@ export class HUD {
 
         <div id="hud-equipped-name" class="equipped-name-badge">Hands</div>
         <div id="hud-hotbar" class="hotbar-slots"></div>
-        <div class="hotbar-hint">[1-6] Select | [Tab/I] Inventory & Craft | [B] Build | [R] Rotate</div>
+        <div class="hotbar-hint">[1-5] Select | [C] Camera | [Tab/I] Backpack | [B] Build</div>
       </div>
     `;
 
@@ -168,7 +173,7 @@ export class HUD {
     const hotbarEl = this.element.querySelector('#hud-hotbar');
     hotbarEl.innerHTML = '';
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 5; i++) {
       const slot = document.createElement('div');
       slot.className = `hotbar-slot ${i === 0 ? 'active' : ''}`;
       slot.setAttribute('data-index', i);
@@ -364,14 +369,16 @@ export class HUD {
   }
 
   updateHotbar(inventory) {
-    const slots = inventory.slots.slice(0, 6);
+    const hotbarCount = inventory.hotbarSize || 5;
+    const slots = inventory.slots.slice(0, hotbarCount);
     const activeIdx = inventory.selectedHotbarIndex;
 
     const hotbarEl = this.element.querySelector('#hud-hotbar');
     const children = hotbarEl.children;
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < hotbarCount; i++) {
       const slotEl = children[i];
+      if (!slotEl) continue;
       const item = slots[i];
       const iconEl = slotEl.querySelector('.slot-icon');
       const countEl = slotEl.querySelector('.slot-count');
@@ -399,6 +406,21 @@ export class HUD {
       equippedNameEl.textContent = def ? def.name : 'Unknown Item';
     } else {
       equippedNameEl.textContent = 'Bare Hands';
+    }
+  }
+
+  updateCameraMode(mode) {
+    const textEl = this.element.querySelector('#hud-camera-mode-text');
+    if (textEl) {
+      textEl.textContent = mode === 'TPS' ? '3RD PERSON' : '1ST PERSON';
+    }
+    const badgeEl = this.element.querySelector('#hud-camera-badge');
+    if (badgeEl) {
+      if (mode === 'TPS') {
+        badgeEl.classList.add('tps-mode');
+      } else {
+        badgeEl.classList.remove('tps-mode');
+      }
     }
   }
 

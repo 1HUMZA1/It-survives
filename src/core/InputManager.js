@@ -42,6 +42,7 @@ export class InputManager {
     this.onRotatePress = null;
     this.onSlotSelect = null;
     this.onPauseToggle = null;
+    this.onCameraToggle = null;
 
     this.setupListeners();
   }
@@ -117,6 +118,9 @@ export class InputManager {
       case 'KeyB':
         this.keys.build = true;
         if (this.onBuildToggle) this.onBuildToggle();
+        break;
+      case 'KeyC':
+        if (this.onCameraToggle) this.onCameraToggle();
         break;
       case 'KeyR':
         if (this.onRotatePress) this.onRotatePress();

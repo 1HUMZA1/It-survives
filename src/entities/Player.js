@@ -1,23 +1,30 @@
 // Complete Survival Player Controller: Physics, Fixed YXZ Camera, Robust Survival Systems (Health, Hunger, Thirst, Stamina)
 import * as THREE from '../three.js';
 import { PlayerArms } from './PlayerArms.js';
+import { PlayerModel } from './PlayerModel.js';
 import { ITEMS } from '../items/ItemDefinitions.js';
 import { survivalStats } from '../core/SurvivalStats.js';
+import { physicsManager } from '../core/PhysicsManager.js';
 
 export class Player {
-  constructor(camera, scene, terrain, ocean, inventory, audio) {
+  constructor(camera, scene, terrain, ocean, inventory, audio, cameraController = null) {
     this.camera = camera;
     this.scene = scene;
     this.terrain = terrain;
     this.ocean = ocean;
     this.inventory = inventory;
     this.audio = audio;
+    this.cameraController = cameraController;
+    this.physicsManager = physicsManager;
 
     // Explicitly enforce YXZ rotation order on camera to eliminate any 90-degree roll bug
     this.camera.rotation.order = 'YXZ';
 
-    // Viewmodel arms and tool representation
+    // Viewmodel arms and tool representation (First-Person)
     this.arms = new PlayerArms(camera);
+
+    // 3D Survivor Avatar Model (Third-Person)
+    this.playerModel = new PlayerModel(scene);
 
     // Initial position on beach near airplane crash site
     this.position = new THREE.Vector3(56, 1.8, 76);
@@ -97,10 +104,13 @@ export class Player {
     this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
     this.camera.up.set(0, 1, 0);
 
-    // 1. Sync Equipped Tool from Hotbar with viewmodel arms & 3D Building Hologram
+    // 1. Sync Equipped Tool from Hotbar with viewmodel arms & 3D Building Hologram & Character Model
     const equipped = this.inventory.getEquippedItem();
     const toolId = equipped ? equipped.id : 'hands';
     this.arms.setEquippedTool(toolId);
+    if (this.playerModel) {
+      this.playerModel.setEquippedTool(toolId);
+    }
 
     // If equipped item is a placeable structure, activate building preview automatically
     const isStructure = equipped && (
@@ -216,29 +226,66 @@ export class Player {
       this.velocity.y += this.gravity * delta;
     }
 
+    // Calculate desired movement translation vector
+    const desiredMovement = new THREE.Vector3(
+      this.velocity.x * delta,
+      this.velocity.y * delta,
+      this.velocity.z * delta
+    );
+
+    // Compute collision-aware movement via Rapier 3D physics if initialized
+    let movement = desiredMovement;
+    if (this.physicsManager && this.physicsManager.isReady) {
+      movement = this.physicsManager.computePlayerMovement(desiredMovement, delta);
+    }
+
     // Apply translation
-    this.position.x += this.velocity.x * delta;
-    this.position.z += this.velocity.z * delta;
-    this.position.y += this.velocity.y * delta;
+    this.position.x += movement.x;
+    this.position.y += movement.y;
+    this.position.z += movement.z;
 
     if (hasInput && (this.isGrounded || this.isSwimming)) {
       survivalStats.recordDistance(currentSpeed * delta);
     }
 
-    // Ground Collision Clamping
+    // Rock-solid Ground Collision Clamping: The player must NEVER fall through the ground!
     const updatedGroundY = this.terrain.getElevation(this.position.x, this.position.z);
     if (!this.isSwimming && this.position.y <= updatedGroundY) {
       this.position.y = updatedGroundY;
       this.velocity.y = 0;
       this.isGrounded = true;
+    } else if (!this.isSwimming) {
+      if (this.physicsManager && this.physicsManager.isReady && this.physicsManager.isPlayerGrounded()) {
+        this.isGrounded = true;
+      }
     }
 
-    // Update Camera position
-    this.camera.position.set(
-      this.position.x,
-      this.position.y + this.height,
-      this.position.z
-    );
+    // Update Camera position (First-Person vs Third-Person)
+    if (this.cameraController) {
+      this.cameraController.update(delta, this.position, this.height, this.yaw, this.pitch);
+      const isTPS = this.cameraController.isThirdPerson();
+      this.playerModel.setVisible(isTPS);
+      this.arms.group.visible = !isTPS;
+    } else {
+      this.camera.position.set(
+        this.position.x,
+        this.position.y + this.height,
+        this.position.z
+      );
+    }
+
+    // Update Third-Person Character Model animation
+    if (this.playerModel) {
+      this.playerModel.update(
+        delta,
+        this.position,
+        this.yaw,
+        hasInput,
+        this.isSprinting,
+        this.isGrounded,
+        this.isSwimming
+      );
+    }
 
     // Footstep audio
     if (hasInput && (this.isGrounded || this.isSwimming)) {
@@ -413,6 +460,9 @@ export class Player {
 
     // Play swing animation and tool swoosh
     this.arms.swing();
+    if (this.playerModel) {
+      this.playerModel.triggerSwing();
+    }
 
     const equipped = this.inventory.getEquippedItem();
     let attackPower = 10;

@@ -124,10 +124,10 @@ export class InventoryCraftingUI {
 
           <!-- COLUMN 2: Storage Grid (Hotbar + 24 Backpack Slots) -->
           <div class="inv-column col-storage">
-            <!-- Hotbar Section (1 - 6) -->
+            <!-- Hotbar Section (1 - 5) -->
             <div class="section-header">
               <span class="sec-icon">⚡</span>
-              <span class="sec-title">QUICK ACCESS HOTBAR (1 - 6)</span>
+              <span class="sec-title">QUICK ACCESS HOTBAR (1 - 5)</span>
             </div>
             <div id="inv-hotbar-grid" class="slots-grid hotbar-grid"></div>
 
@@ -135,7 +135,7 @@ export class InventoryCraftingUI {
             <div class="section-header backpack-header">
               <div class="flex-between">
                 <span><span class="sec-icon">🎒</span> <span class="sec-title">BACKPACK STORAGE (24 SLOTS)</span></span>
-                <span id="inv-capacity-badge" class="capacity-badge">0 / 30 Items</span>
+                <span id="inv-capacity-badge" class="capacity-badge">0 / 29 Items</span>
               </div>
             </div>
             <div id="inv-backpack-grid" class="slots-grid backpack-grid"></div>
@@ -476,22 +476,25 @@ export class InventoryCraftingUI {
 
     let usedSlots = 0;
 
-    // 1. Hotbar Slots (0..5)
-    for (let i = 0; i < 6; i++) {
+    const hotbarCount = this.inventory.hotbarSize || 5;
+    const totalSlots = this.inventory.slots.length;
+
+    // 1. Hotbar Slots (0 .. hotbarCount-1)
+    for (let i = 0; i < hotbarCount; i++) {
       if (this.inventory.slots[i]) usedSlots++;
       const slotEl = this.createSlotElement(i, true);
       hotbarGrid.appendChild(slotEl);
     }
 
-    // 2. Backpack Slots (6..29)
-    for (let i = 6; i < 30; i++) {
+    // 2. Backpack Slots (hotbarCount .. totalSlots-1)
+    for (let i = hotbarCount; i < totalSlots; i++) {
       if (this.inventory.slots[i]) usedSlots++;
       const slotEl = this.createSlotElement(i, false);
       backpackGrid.appendChild(slotEl);
     }
 
     if (capBadge) {
-      capBadge.textContent = `${usedSlots} / 30 Slots`;
+      capBadge.textContent = `${usedSlots} / ${totalSlots} Slots`;
     }
   }
 
