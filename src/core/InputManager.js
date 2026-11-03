@@ -56,6 +56,14 @@ export class InputManager {
     window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
     window.addEventListener('wheel', (e) => this.handleWheel(e), { passive: true });
 
+    if (this.domElement) {
+      this.domElement.addEventListener('click', () => {
+        if (!this.isPointerLocked) {
+          this.requestLock();
+        }
+      });
+    }
+
     document.addEventListener('pointerlockchange', () => {
       this.isPointerLocked = document.pointerLockElement === this.domElement;
       if (this.onLockChange) this.onLockChange(this.isPointerLocked);
@@ -184,7 +192,10 @@ export class InputManager {
   }
 
   handleMouseDown(e) {
-    if (!this.isPointerLocked) return;
+    if (!this.isPointerLocked) {
+      this.requestLock();
+      return;
+    }
     if (e.button === 0) {
       this.mouse.leftDown = true;
       this.mouse.leftClicked = true;

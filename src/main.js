@@ -235,6 +235,13 @@ class Game {
       audio.playUIClick();
     };
 
+    // Exit build mode button on HUD
+    this.hud.onExitBuildClick = () => {
+      this.hud.setBuildMode(false, this.building, this.inventory);
+      this.building.cancelBuilding();
+      audio.playUIClick();
+    };
+
     // Exit build mode from player
     this.player.onExitBuildMode = () => {
       this.hud.setBuildMode(false, this.building, this.inventory);

@@ -12,6 +12,7 @@ export class HUD {
     this.floatingFeedbacksContainer = null;
     this.isBuildMode = false;
     this.onBuildPieceSelect = null;
+    this.onExitBuildClick = null;
 
     this.prevVitals = { health: 100, hunger: 100, thirst: 100, stamina: 100 };
 
@@ -148,7 +149,8 @@ export class HUD {
         <div id="hud-build-bar" class="build-mode-container hidden">
           <div class="build-mode-header">
             <span class="build-mode-title">🔨 BASE CONSTRUCTION MODE</span>
-            <span class="build-mode-sub">Press <kbd>1-7</kbd> to Select Piece • <kbd>R</kbd> Rotate • <kbd>B</kbd> Exit</span>
+            <span class="build-mode-sub">Press <kbd>1-7</kbd> Select • <kbd>R</kbd> Rotate • <kbd>B</kbd> Exit</span>
+            <button id="btn-exit-build" class="build-exit-btn" title="Exit Construction Mode">✕ Exit</button>
           </div>
           <div id="build-piece-slots" class="build-piece-slots"></div>
         </div>
@@ -165,6 +167,14 @@ export class HUD {
     this.promptEl = this.element.querySelector('#hud-prompt');
     this.damageVignetteEl = this.element.querySelector('#damage-vignette');
     this.floatingFeedbacksContainer = this.element.querySelector('#hud-stat-feedbacks');
+
+    const exitBuildBtn = this.element.querySelector('#btn-exit-build');
+    if (exitBuildBtn) {
+      exitBuildBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.onExitBuildClick) this.onExitBuildClick();
+      });
+    }
 
     this.renderHotbarSlots();
   }

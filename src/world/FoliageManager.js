@@ -40,7 +40,7 @@ export class FoliageManager {
       if (y <= 3.2) {
         // --- 🏖️ Coastal Beach Zone ---
         const roll = Math.random();
-        if (roll < 0.42) {
+        if (roll < 0.38) {
           // Varied tropical palm trees (king, tall, leaning, dwarf, sapling)
           const palmRoll = Math.random();
           let variant = 'tall';
@@ -51,9 +51,9 @@ export class FoliageManager {
 
           node = FloraModels.createPalmTree(variant);
 
-          // Often spawn a fallen ground coconut nearby on the sand!
+          // Often spawn a fallen ground coconut or frond nearby on the sand!
           if (Math.random() < 0.65) {
-            const nut = FloraModels.createGroundCoconut();
+            const nut = Math.random() < 0.5 ? FloraModels.createGroundCoconut() : FloraModels.createFallenFrond();
             const offset = (Math.random() - 0.5) * 3.5;
             const nutX = x + offset;
             const nutZ = z + offset;
@@ -65,11 +65,15 @@ export class FoliageManager {
               this.interactiveNodes.push(nut);
             }
           }
-        } else if (roll < 0.60) {
+        } else if (roll < 0.52) {
           node = FloraModels.createGroundStone(); // Loose beach stones!
-        } else if (roll < 0.76) {
+        } else if (roll < 0.66) {
+          node = FloraModels.createFallenBranch(); // Dry fallen tree branches!
+        } else if (roll < 0.78) {
+          node = FloraModels.createFallenFrond(); // Fallen palm leaves!
+        } else if (roll < 0.86) {
           node = FloraModels.createDriftwood(); // Beach driftwood logs!
-        } else if (roll < 0.88) {
+        } else if (roll < 0.94) {
           node = FloraModels.createGroundCoconut();
         } else {
           node = FloraModels.createRockNode();
@@ -77,21 +81,23 @@ export class FoliageManager {
       } else if (y <= 22.0) {
         // --- 🌴 Dense Tropical Jungle & Rainforest Zone ---
         const roll = Math.random();
-        if (roll < 0.18) {
+        if (roll < 0.16) {
           node = FloraModels.createPalmTree('king');
-        } else if (roll < 0.36) {
+        } else if (roll < 0.32) {
           node = FloraModels.createJungleTree();
-        } else if (roll < 0.48) {
-          node = FloraModels.createWildBananaTree(); // Wild banana trees!
-        } else if (roll < 0.58) {
-          node = FloraModels.createBambooGrove(); // Slender bamboo groves!
-        } else if (roll < 0.70) {
+        } else if (roll < 0.44) {
+          node = FloraModels.createFallenBranch(); // Fallen jungle branches
+        } else if (roll < 0.54) {
           node = FloraModels.createBerryBush(); // Wild juicy berry bushes!
-        } else if (roll < 0.82) {
-          node = FloraModels.createFernNode(); // Lush tropical ferns!
-        } else if (roll < 0.90) {
+        } else if (roll < 0.66) {
+          node = FloraModels.createFernNode(); // Lush tropical ferns (Fiber)!
+        } else if (roll < 0.76) {
           node = FloraModels.createMushroomNode(); // Forest mushroom clusters!
-        } else if (roll < 0.95) {
+        } else if (roll < 0.84) {
+          node = FloraModels.createWildBananaTree(); // Wild banana trees!
+        } else if (roll < 0.92) {
+          node = FloraModels.createBambooGrove(); // Slender bamboo groves!
+        } else if (roll < 0.96) {
           node = FloraModels.createMonsteraBush();
         } else {
           node = FloraModels.createRockNode();
@@ -119,6 +125,9 @@ export class FoliageManager {
         this.interactiveNodes.push(node);
       }
     }
+
+    // Spawn guaranteed interactive starter resources in player's immediate view (Spawn at x=56, z=76)
+    this.spawnStarterResources();
 
     // Instanced Lush Tropical Undergrowth Grass Tufts for cinematic natural scenery
     this.createInstancedGrassTufts(radius);
@@ -175,6 +184,34 @@ export class FoliageManager {
     if (instancedMesh.instanceColor) instancedMesh.instanceColor.needsUpdate = true;
     instancedMesh.receiveShadow = true;
     this.group.add(instancedMesh);
+  }
+
+  // Spawn guaranteed cluster of all 8 primary interactive resources near player start (x=56, z=76)
+  spawnStarterResources() {
+    const starterItems = [
+      { fn: () => FloraModels.createPalmTree('dwarf'), x: 61, z: 78, rot: 0.4 },
+      { fn: () => FloraModels.createFallenBranch(), x: 57, z: 73, rot: 1.2 },
+      { fn: () => FloraModels.createFallenFrond(), x: 54, z: 74, rot: 0.8 },
+      { fn: () => FloraModels.createGroundCoconut(), x: 55, z: 72, rot: 0 },
+      { fn: () => FloraModels.createGroundStone(), x: 58, z: 75, rot: 0 },
+      { fn: () => FloraModels.createBerryBush(), x: 53, z: 78, rot: 0 },
+      { fn: () => FloraModels.createMushroomNode(), x: 51, z: 75, rot: 0 },
+      { fn: () => FloraModels.createFernNode(), x: 59, z: 74, rot: 0.5 },
+      { fn: () => FloraModels.createRockNode(), x: 50, z: 81, rot: 0.2 },
+      { fn: () => FloraModels.createFallenBranch(), x: 58, z: 71, rot: 2.1 },
+      { fn: () => FloraModels.createGroundStone(), x: 53, z: 72, rot: 0 }
+    ];
+
+    for (let s of starterItems) {
+      const node = s.fn();
+      if (node) {
+        const y = this.terrain.getElevation(s.x, s.z);
+        node.position.set(s.x, y, s.z);
+        if (s.rot) node.rotation.y = s.rot;
+        this.group.add(node);
+        this.interactiveNodes.push(node);
+      }
+    }
   }
 
   // Check raycast for interactive nodes

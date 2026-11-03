@@ -296,6 +296,84 @@ export class FloraModels {
     return group;
   }
 
+  // 4b. Loose Fallen Tree Branch (Collect with [E] or chop with Axe)
+  static createFallenBranch() {
+    const group = new THREE.Group();
+    const branchMat = new THREE.MeshStandardMaterial({
+      color: 0x5d4037,
+      roughness: 0.9,
+      flatShading: true
+    });
+
+    const mainGeo = new THREE.CylinderGeometry(0.04, 0.07, 1.4, 5);
+    mainGeo.rotateZ(Math.PI / 2);
+    const main = new THREE.Mesh(mainGeo, branchMat);
+    main.position.y = 0.05;
+    main.castShadow = true;
+    group.add(main);
+
+    // Small twig sticking out
+    const twigGeo = new THREE.CylinderGeometry(0.02, 0.035, 0.5, 4);
+    twigGeo.rotateZ(Math.PI / 3);
+    const twig = new THREE.Mesh(twigGeo, branchMat);
+    twig.position.set(0.2, 0.08, 0.15);
+    twig.rotation.y = 0.6;
+    twig.castShadow = true;
+    group.add(twig);
+
+    group.userData = {
+      type: 'ground_branch',
+      name: 'Fallen Branch',
+      isDirectPickup: true,
+      maxHealth: 15,
+      health: 15,
+      resourceYield: { branch: 2, wood: 1 },
+      pickupPrompt: '[E] Pick up Fallen Branch'
+    };
+
+    return group;
+  }
+
+  // 4c. Loose Fallen Palm Frond / Leaves (Collect with [E])
+  static createFallenFrond() {
+    const group = new THREE.Group();
+    const frondMat = new THREE.MeshStandardMaterial({
+      color: 0x4caf50,
+      roughness: 0.7,
+      side: THREE.DoubleSide
+    });
+
+    const stemGeo = new THREE.CylinderGeometry(0.02, 0.035, 1.8, 4);
+    stemGeo.rotateZ(Math.PI / 2);
+    const stemMat = new THREE.MeshStandardMaterial({ color: 0x388e3c, roughness: 0.8 });
+    const stem = new THREE.Mesh(stemGeo, stemMat);
+    stem.position.y = 0.05;
+    stem.castShadow = true;
+    group.add(stem);
+
+    for (let i = 0; i < 5; i++) {
+      const t = (i + 1) / 6;
+      const bladeGeo = new THREE.ConeGeometry(0.22, 0.75, 3);
+      bladeGeo.rotateX(Math.PI / 2);
+      const blade = new THREE.Mesh(bladeGeo, frondMat);
+      blade.position.set((t - 0.5) * 1.6, 0.05, (i % 2 === 0 ? 0.28 : -0.28));
+      blade.rotation.y = (i % 2 === 0 ? 0.35 : -0.35);
+      blade.scale.set(1.0, 0.05, 1.0);
+      blade.castShadow = true;
+      group.add(blade);
+    }
+
+    group.userData = {
+      type: 'ground_frond',
+      name: 'Fallen Palm Leaves',
+      isDirectPickup: true,
+      resourceYield: { leaves: 3, fiber: 2 },
+      pickupPrompt: '[E] Pick up Palm Leaves'
+    };
+
+    return group;
+  }
+
   // 5. Ground Coconut (Loose on sand under palms, collect with [E])
   static createGroundCoconut() {
     const group = new THREE.Group();

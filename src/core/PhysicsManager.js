@@ -105,13 +105,32 @@ export class PhysicsManager {
     }
   }
 
+  // Set Player Position in Rapier Physics World
+  setPlayerPosition(pos) {
+    if (!this.isReady || !this.playerBody) return;
+    try {
+      this.playerBody.setTranslation({ x: pos.x, y: pos.y + 0.9, z: pos.z }, true);
+    } catch (e) {
+      // ignore
+    }
+  }
+
   // Move player via Rapier Character Controller
-  computePlayerMovement(desiredMovement, delta) {
-    if (!this.isReady || !this.characterController || !this.playerCollider) {
+  computePlayerMovement(currentPos, desiredMovement, delta) {
+    if (!this.isReady || !this.characterController || !this.playerCollider || !this.playerBody) {
       return desiredMovement;
     }
 
     try {
+      // Sync player rigid body position with Three.js player coordinates
+      if (currentPos) {
+        this.playerBody.setTranslation({
+          x: currentPos.x,
+          y: currentPos.y + 0.9,
+          z: currentPos.z
+        }, true);
+      }
+
       // Calculate collision-aware movement
       this.characterController.computeColliderMovement(
         this.playerCollider,
@@ -119,6 +138,15 @@ export class PhysicsManager {
       );
 
       const corrected = this.characterController.computedMovement();
+
+      // Safeguard: If player is actively moving with WASD but physics controller is trapped/pinched,
+      // allow fluid movement rather than freezing the character in place!
+      const inputSpeed = Math.hypot(desiredMovement.x, desiredMovement.z);
+      const correctedSpeed = Math.hypot(corrected.x, corrected.z);
+      if (inputSpeed > 0.0001 && correctedSpeed < 0.00001) {
+        return desiredMovement;
+      }
+
       return new THREE.Vector3(corrected.x, corrected.y, corrected.z);
     } catch (e) {
       return desiredMovement;

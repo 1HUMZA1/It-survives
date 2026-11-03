@@ -236,7 +236,7 @@ export class Player {
     // Compute collision-aware movement via Rapier 3D physics if initialized
     let movement = desiredMovement;
     if (this.physicsManager && this.physicsManager.isReady) {
-      movement = this.physicsManager.computePlayerMovement(desiredMovement, delta);
+      movement = this.physicsManager.computePlayerMovement(this.position, desiredMovement, delta);
     }
 
     // Apply translation
@@ -413,8 +413,12 @@ export class Player {
 
   respawn() {
     this.isDead = false;
-    this.position.set(56, 1.8, 76);
+    const spawnY = this.terrain ? Math.max(1.8, this.terrain.getElevation(56, 76) + 0.1) : 1.8;
+    this.position.set(56, spawnY, 76);
     this.velocity.set(0, 0, 0);
+    if (this.physicsManager && this.physicsManager.isReady) {
+      this.physicsManager.setPlayerPosition(this.position);
+    }
     this.vitals.health = 100;
     this.vitals.hunger = 85;
     this.vitals.thirst = 85;
@@ -580,7 +584,7 @@ export class Player {
         this.audio.playGather();
       }
 
-      foliageManager.damageNode(
+      const res = foliageManager.damageNode(
         node,
         effectiveDmg,
         foliageHit.point,
@@ -590,14 +594,28 @@ export class Player {
           if (nodeType === 'palm_tree' || nodeType === 'jungle_tree') {
             survivalStats.recordWoodGathered(2);
           }
+          const gatheredList = [];
           for (let itemKey of Object.keys(yieldItems)) {
             this.inventory.addItem(itemKey, yieldItems[itemKey]);
-            if (this.onNotification) {
-              this.onNotification(`+${yieldItems[itemKey]} ${itemKey.replace('_', ' ').toUpperCase()}`);
-            }
+            const itemDef = Object.values(ITEMS).find(it => it.id === itemKey);
+            const name = itemDef ? itemDef.name : itemKey.replace('_', ' ').toUpperCase();
+            gatheredList.push(`+${yieldItems[itemKey]} ${name}`);
+          }
+          if (this.onNotification) {
+            const nodeTitle = node.userData.name || 'Resource';
+            this.onNotification(`🎉 Harvested ${nodeTitle}! (${gatheredList.join(', ')})`);
           }
         }
       );
+
+      if (res && !res.destroyed && this.onNotification) {
+        const remaining = Math.max(0, Math.round(res.health));
+        if (nodeType === 'palm_tree' || nodeType === 'jungle_tree') {
+          this.onNotification(`🪵 Chopping ${node.userData.name} (${remaining}/${node.userData.maxHealth} HP)`);
+        } else if (nodeType === 'rock_node') {
+          this.onNotification(`⛏️ Mining ${node.userData.name} (${remaining}/${node.userData.maxHealth} HP)`);
+        }
+      }
     }
   }
 
@@ -669,8 +687,10 @@ export class Player {
         survivalStats.recordHarvest(1);
         for (let itemKey of Object.keys(yieldItems)) {
           this.inventory.addItem(itemKey, yieldItems[itemKey]);
+          const itemDef = Object.values(ITEMS).find(it => it.id === itemKey);
+          const name = itemDef ? itemDef.name : itemKey.replace('_', ' ').toUpperCase();
           if (this.onNotification) {
-            this.onNotification(`+${yieldItems[itemKey]} ${itemKey.replace('_', ' ').toUpperCase()}`);
+            this.onNotification(`+${yieldItems[itemKey]} ${name}`);
           }
         }
       });
@@ -773,16 +793,29 @@ export class Player {
     }
 
     // 1. Direct Ground Resource Pickups & Harvestable Flora
-    const foliageHit = foliageManager.checkRaycast(this.raycaster, 3.8);
+    const foliageHit = foliageManager.checkRaycast(this.raycaster, 4.0);
     if (foliageHit) {
       const d = foliageHit.node.userData;
       if (d.isDirectPickup && d.pickupPrompt) {
         return d.pickupPrompt;
       }
-      if (d.type === 'palm_tree') return `[Left Click] Chop Palm Tree (Axe: Wood, Leaves, Coconuts)`;
-      if (d.type === 'jungle_tree') return `[Left Click] Chop Rainforest Timber (Axe: Wood, Leaves, Fiber)`;
-      if (d.type === 'rock_node') return `[Left Click] Mine Boulder (Pickaxe: Stone, Flint)`;
-      if (d.type === 'driftwood') return `[E] Gather Driftwood | [Left Click] Chop`;
+      const hpTag = d.maxHealth ? ` [HP: ${Math.max(0, Math.round(d.health))}/${d.maxHealth}]` : '';
+      const isAxe = equipped && (equipped.id === 'stone_axe' || equipped.id === 'wooden_axe');
+      const isPick = equipped && (equipped.id === 'stone_pickaxe');
+
+      if (d.type === 'palm_tree' || d.type === 'jungle_tree') {
+        const title = d.name || 'Tree';
+        return isAxe
+          ? `🪓 [Left Click] Chop ${title} with Axe (+Wood, Leaves, Coconuts)${hpTag}`
+          : `✋ [Left Click] Punch ${title}${hpTag} (Equip Axe for 4x Speed)`;
+      }
+      if (d.type === 'rock_node') {
+        const title = d.name || 'Boulder';
+        return isPick
+          ? `⛏️ [Left Click] Mine ${title} with Pickaxe (+Stone, Flint)${hpTag}`
+          : `✋ [Left Click] Mine ${title}${hpTag} (Equip Stone Pickaxe for 5x Speed)`;
+      }
+      if (d.type === 'driftwood') return `[E] Gather Driftwood | [Left Click] Chop${hpTag}`;
     }
 
     // 2. Scavenge Airplane Debris

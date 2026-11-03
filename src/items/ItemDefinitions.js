@@ -50,6 +50,14 @@ export const ITEMS = {
     description: 'Large tropical palm fronds used for thatching roofs, lean-to shelters, and crafting.',
     maxStack: 30
   },
+  BRANCH: {
+    id: 'branch',
+    name: 'Fallen Branch',
+    category: 'resource',
+    icon: '🪵',
+    description: 'Dry fallen tree branch. Used for campfire fuel, kindling, spears, and crafting.',
+    maxStack: 50
+  },
   MUSHROOM: {
     id: 'mushroom',
     name: 'Wild Forest Mushroom',
