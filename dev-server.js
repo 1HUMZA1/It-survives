@@ -22,6 +22,7 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.wav': 'audio/wav',
   '.mp3': 'audio/mpeg',
+  '.wasm': 'application/wasm',
   '.ico': 'image/x-icon'
 };
 
