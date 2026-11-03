@@ -88,106 +88,72 @@ export class InputManager {
 
   handleKeyDown(e) {
     if (e.repeat) return;
+    const code = e.code;
+    const key = (e.key || '').toLowerCase();
 
-    switch (e.code) {
-      case 'KeyW':
-      case 'ArrowUp':
-        this.keys.forward = true;
-        break;
-      case 'KeyS':
-      case 'ArrowDown':
-        this.keys.backward = true;
-        break;
-      case 'KeyA':
-      case 'ArrowLeft':
-        this.keys.left = true;
-        break;
-      case 'KeyD':
-      case 'ArrowRight':
-        this.keys.right = true;
-        break;
-      case 'Space':
-        this.keys.jump = true;
-        break;
-      case 'ShiftLeft':
-      case 'ShiftRight':
-        this.keys.sprint = true;
-        break;
-      case 'KeyE':
-        this.keys.interact = true;
-        if (this.onInteractPress) this.onInteractPress();
-        break;
-      case 'KeyI':
-      case 'Tab':
-        e.preventDefault();
-        this.keys.inventory = true;
-        if (this.onInventoryToggle) this.onInventoryToggle();
-        break;
-      case 'KeyB':
-        this.keys.build = true;
-        if (this.onBuildToggle) this.onBuildToggle();
-        break;
-      case 'KeyC':
-        if (this.onCameraToggle) this.onCameraToggle();
-        break;
-      case 'KeyR':
-        if (this.onRotatePress) this.onRotatePress();
-        break;
-      case 'Digit1':
-        if (this.onSlotSelect) this.onSlotSelect(0);
-        break;
-      case 'Digit2':
-        if (this.onSlotSelect) this.onSlotSelect(1);
-        break;
-      case 'Digit3':
-        if (this.onSlotSelect) this.onSlotSelect(2);
-        break;
-      case 'Digit4':
-        if (this.onSlotSelect) this.onSlotSelect(3);
-        break;
-      case 'Digit5':
-        if (this.onSlotSelect) this.onSlotSelect(4);
-        break;
-      case 'Digit6':
-        if (this.onSlotSelect) this.onSlotSelect(5);
-        break;
-      case 'Digit7':
-        if (this.onSlotSelect) this.onSlotSelect(6);
-        break;
-      case 'Escape':
-        if (this.onPauseToggle) this.onPauseToggle();
-        break;
+    if (code === 'KeyW' || key === 'w' || code === 'ArrowUp') {
+      this.keys.forward = true;
+    } else if (code === 'KeyS' || key === 's' || code === 'ArrowDown') {
+      this.keys.backward = true;
+    } else if (code === 'KeyA' || key === 'a' || code === 'ArrowLeft') {
+      this.keys.left = true;
+    } else if (code === 'KeyD' || key === 'd' || code === 'ArrowRight') {
+      this.keys.right = true;
+    } else if (code === 'Space' || key === ' ') {
+      this.keys.jump = true;
+    } else if (code === 'ShiftLeft' || code === 'ShiftRight' || key === 'shift') {
+      this.keys.sprint = true;
+    } else if (code === 'KeyE' || key === 'e') {
+      this.keys.interact = true;
+      if (this.onInteractPress) this.onInteractPress();
+    } else if (code === 'KeyI' || key === 'i' || code === 'Tab' || key === 'tab') {
+      e.preventDefault();
+      this.keys.inventory = true;
+      if (this.onInventoryToggle) this.onInventoryToggle();
+    } else if (code === 'KeyB' || key === 'b') {
+      this.keys.build = true;
+      if (this.onBuildToggle) this.onBuildToggle();
+    } else if (code === 'KeyC' || key === 'c') {
+      if (this.onCameraToggle) this.onCameraToggle();
+    } else if (code === 'KeyR' || key === 'r') {
+      if (this.onRotatePress) this.onRotatePress();
+    } else if (code === 'Digit1' || key === '1') {
+      if (this.onSlotSelect) this.onSlotSelect(0);
+    } else if (code === 'Digit2' || key === '2') {
+      if (this.onSlotSelect) this.onSlotSelect(1);
+    } else if (code === 'Digit3' || key === '3') {
+      if (this.onSlotSelect) this.onSlotSelect(2);
+    } else if (code === 'Digit4' || key === '4') {
+      if (this.onSlotSelect) this.onSlotSelect(3);
+    } else if (code === 'Digit5' || key === '5') {
+      if (this.onSlotSelect) this.onSlotSelect(4);
+    } else if (code === 'Digit6' || key === '6') {
+      if (this.onSlotSelect) this.onSlotSelect(5);
+    } else if (code === 'Digit7' || key === '7') {
+      if (this.onSlotSelect) this.onSlotSelect(6);
+    } else if (code === 'Escape' || key === 'escape') {
+      if (this.onPauseToggle) this.onPauseToggle();
     }
   }
 
   handleKeyUp(e) {
-    switch (e.code) {
-      case 'KeyW':
-      case 'ArrowUp':
-        this.keys.forward = false;
-        break;
-      case 'KeyS':
-      case 'ArrowDown':
-        this.keys.backward = false;
-        break;
-      case 'KeyA':
-      case 'ArrowLeft':
-        this.keys.left = false;
-        break;
-      case 'KeyD':
-      case 'ArrowRight':
-        this.keys.right = false;
-        break;
-      case 'Space':
-        this.keys.jump = false;
-        break;
-      case 'ShiftLeft':
-      case 'ShiftRight':
-        this.keys.sprint = false;
-        break;
-      case 'KeyE':
-        this.keys.interact = false;
-        break;
+    const code = e.code;
+    const key = (e.key || '').toLowerCase();
+
+    if (code === 'KeyW' || key === 'w' || code === 'ArrowUp') {
+      this.keys.forward = false;
+    } else if (code === 'KeyS' || key === 's' || code === 'ArrowDown') {
+      this.keys.backward = false;
+    } else if (code === 'KeyA' || key === 'a' || code === 'ArrowLeft') {
+      this.keys.left = false;
+    } else if (code === 'KeyD' || key === 'd' || code === 'ArrowRight') {
+      this.keys.right = false;
+    } else if (code === 'Space' || key === ' ') {
+      this.keys.jump = false;
+    } else if (code === 'ShiftLeft' || code === 'ShiftRight' || key === 'shift') {
+      this.keys.sprint = false;
+    } else if (code === 'KeyE' || key === 'e') {
+      this.keys.interact = false;
     }
   }
 

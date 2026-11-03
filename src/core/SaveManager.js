@@ -45,6 +45,17 @@ export class SaveManager {
         player.position.set(data.player.x, data.player.y, data.player.z);
         player.yaw = data.player.yaw || 0;
         player.pitch = data.player.pitch || 0;
+
+        if (player.terrain) {
+          const groundY = player.terrain.getElevation(player.position.x, player.position.z);
+          if (player.position.y < groundY) {
+            player.position.y = groundY + 0.1;
+          }
+        }
+        if (player.physicsManager && player.physicsManager.isReady) {
+          player.physicsManager.setPlayerPosition(player.position);
+        }
+
         if (data.player.vitals) {
           Object.assign(player.vitals, data.player.vitals);
         }

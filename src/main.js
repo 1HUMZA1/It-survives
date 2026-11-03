@@ -477,113 +477,117 @@ class Game {
   animate() {
     requestAnimationFrame(() => this.animate());
 
-    const delta = Math.min(this.clock.getDelta(), 0.1);
+    try {
+      const delta = Math.min(this.clock.getDelta(), 0.1);
 
-    // 1. Main Menu Cinematic Camera Orbit
-    if (this.state === this.STATE_MENU) {
-      this.menuOrbitAngle += delta * 0.08;
-      const camDist = 180;
-      const camX = Math.cos(this.menuOrbitAngle) * camDist;
-      const camZ = Math.sin(this.menuOrbitAngle) * camDist;
-      const camY = 32 + Math.sin(this.menuOrbitAngle * 2) * 6;
+      // 1. Main Menu Cinematic Camera Orbit
+      if (this.state === this.STATE_MENU) {
+        this.menuOrbitAngle += delta * 0.08;
+        const camDist = 180;
+        const camX = Math.cos(this.menuOrbitAngle) * camDist;
+        const camZ = Math.sin(this.menuOrbitAngle) * camDist;
+        const camY = 32 + Math.sin(this.menuOrbitAngle * 2) * 6;
 
-      this.camera.position.set(camX, camY, camZ);
-      this.camera.lookAt(0, 10, 0);
+        this.camera.position.set(camX, camY, camZ);
+        this.camera.lookAt(0, 10, 0);
 
-      // Advance ocean waves and atmosphere
-      this.ocean.update(delta, this.timeWeather.sunDirection);
-      this.timeWeather.update(delta * 0.5, new THREE.Vector3(0, 0, 0));
-      this.building.updateCampfires(delta);
-      this.crashSite.update(delta);
-      this.renderer.render(this.scene, this.camera);
-      return;
-    }
-
-    // 2. Active Gameplay
-    if (this.state === this.STATE_PLAYING) {
-      // Mouse Look
-      this.player.handleMouseLook(
-        this.input.mouse.dx,
-        this.input.mouse.dy,
-        this.input.sensitivity,
-        this.input.invertY
-      );
-
-      // Mouse Wheel hotbar scroll (5 slots)
-      if (this.input.mouse.wheel !== 0) {
-        let newIdx = this.inventory.selectedHotbarIndex + this.input.mouse.wheel;
-        if (newIdx < 0) newIdx = 4;
-        if (newIdx > 4) newIdx = 0;
-        this.inventory.selectHotbarIndex(newIdx);
-        this.hud.updateHotbar(this.inventory);
-        audio.playUIClick();
+        // Advance ocean waves and atmosphere
+        this.ocean.update(delta, this.timeWeather.sunDirection);
+        this.timeWeather.update(delta * 0.5, new THREE.Vector3(0, 0, 0));
+        this.building.updateCampfires(delta);
+        this.crashSite.update(delta);
+        this.renderer.render(this.scene, this.camera);
+        return;
       }
 
-      // Update Player
-      this.player.update(
-        delta,
-        this.input,
-        this.foliage,
-        this.wildlife,
-        this.building,
-        this.crashSite,
-        this.timeWeather
-      );
+      // 2. Active Gameplay
+      if (this.state === this.STATE_PLAYING) {
+        // Mouse Look
+        this.player.handleMouseLook(
+          this.input.mouse.dx,
+          this.input.mouse.dy,
+          this.input.sensitivity,
+          this.input.invertY
+        );
 
-      // Update Building Hologram
-      this.building.update(this.camera, this.player.position);
+        // Mouse Wheel hotbar scroll (5 slots)
+        if (this.input.mouse.wheel !== 0) {
+          let newIdx = this.inventory.selectedHotbarIndex + this.input.mouse.wheel;
+          if (newIdx < 0) newIdx = 4;
+          if (newIdx > 4) newIdx = 0;
+          this.inventory.selectHotbarIndex(newIdx);
+          this.hud.updateHotbar(this.inventory);
+          audio.playUIClick();
+        }
 
-      // Contextual HUD Prompt
-      const promptText = this.player.getInteractionPrompt(
-        this.building,
-        this.crashSite,
-        this.foliage,
-        this.wildlife
-      );
-      this.hud.showInteractionPrompt(promptText);
+        // Update Player
+        this.player.update(
+          delta,
+          this.input,
+          this.foliage,
+          this.wildlife,
+          this.building,
+          this.crashSite,
+          this.timeWeather
+        );
+
+        // Update Building Hologram
+        this.building.update(this.camera, this.player.position);
+
+        // Contextual HUD Prompt
+        const promptText = this.player.getInteractionPrompt(
+          this.building,
+          this.crashSite,
+          this.foliage,
+          this.wildlife
+        );
+        this.hud.showInteractionPrompt(promptText);
+      }
+
+      // Update Wildlife
+      this.wildlife.update(delta, this.player.position, (dmg, reason) => {
+        this.player.takeDamage(dmg, reason);
+      });
+
+      // Step Rapier 3D Physics Simulation
+      physicsManager.step(delta);
+
+      // Update Archipelago Horizons & World Manager
+      if (this.worldManager) {
+        this.worldManager.update(delta, this.player.position);
+      }
+
+      // Update Ocean & Day/Night Atmosphere
+      this.ocean.update(delta, this.timeWeather.sunDirection);
+      this.timeWeather.update(delta, this.player.position);
+      this.foliage.update(delta);
+      this.crashSite.update(delta);
+      this.building.updateCampfires(delta);
+
+      // Update HUD Clock, Compass & Dynamic Weather Badge
+      if (this.state === this.STATE_PLAYING || this.state === this.STATE_INVENTORY) {
+        this.hud.updateTimeAndCompass(
+          this.timeWeather.getFormattedTime(),
+          this.timeWeather.dayCount,
+          this.timeWeather.isNight(),
+          this.player.yaw,
+          this.timeWeather.weather
+        );
+      }
+
+      // Reset frame deltas
+      this.input.resetDeltas();
+
+      // Update Developer Debug Monitor
+      if (this.debugOverlay) {
+        this.debugOverlay.update(delta);
+      }
+
+      // Render Scene
+      this.renderer.render(this.scene, this.camera);
+    } catch (err) {
+      console.warn('Frame render notice (loop auto-recovered):', err);
     }
-
-    // Update Wildlife
-    this.wildlife.update(delta, this.player.position, (dmg, reason) => {
-      this.player.takeDamage(dmg, reason);
-    });
-
-    // Step Rapier 3D Physics Simulation
-    physicsManager.step(delta);
-
-    // Update Archipelago Horizons & World Manager
-    if (this.worldManager) {
-      this.worldManager.update(delta, this.player.position);
-    }
-
-    // Update Ocean & Day/Night Atmosphere
-    this.ocean.update(delta, this.timeWeather.sunDirection);
-    this.timeWeather.update(delta, this.player.position);
-    this.foliage.update(delta);
-    this.crashSite.update(delta);
-    this.building.updateCampfires(delta);
-
-    // Update HUD Clock, Compass & Dynamic Weather Badge
-    if (this.state === this.STATE_PLAYING || this.state === this.STATE_INVENTORY) {
-      this.hud.updateTimeAndCompass(
-        this.timeWeather.getFormattedTime(),
-        this.timeWeather.dayCount,
-        this.timeWeather.isNight(),
-        this.player.yaw,
-        this.timeWeather.weather
-      );
-    }
-
-    // Reset frame deltas
-    this.input.resetDeltas();
-
-    // Update Developer Debug Monitor
-    if (this.debugOverlay) {
-      this.debugOverlay.update(delta);
-    }
-
-    // Render Scene
-    this.renderer.render(this.scene, this.camera);
   }
 }
 

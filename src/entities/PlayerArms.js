@@ -5,6 +5,7 @@ export class PlayerArms {
   constructor(camera) {
     this.camera = camera;
     this.root = new THREE.Group();
+    this.group = this.root; // Alias for compatibility
     this.root.renderOrder = 999;
     this.camera.add(this.root);
 
@@ -469,5 +470,11 @@ export class PlayerArms {
         this.leftArmGroup.position.y = this.leftRestPos.y + reachArc * 0.10;
       }
     }
+  }
+
+  setVisible(visible) {
+    const val = Boolean(visible);
+    if (this.root) this.root.visible = val;
+    if (this.group) this.group.visible = val;
   }
 }

@@ -264,8 +264,8 @@ export class Player {
     if (this.cameraController) {
       this.cameraController.update(delta, this.position, this.height, this.yaw, this.pitch);
       const isTPS = this.cameraController.isThirdPerson();
-      this.playerModel.setVisible(isTPS);
-      this.arms.group.visible = !isTPS;
+      if (this.playerModel) this.playerModel.setVisible(isTPS);
+      if (this.arms) this.arms.setVisible(!isTPS);
     } else {
       this.camera.position.set(
         this.position.x,
