@@ -218,6 +218,25 @@ export class Inventory {
     return this.equipment.accessory && this.equipment.accessory.id === itemId;
   }
 
+  // Check if there is capacity for an item
+  hasRoomForItem(itemId, count = 1) {
+    const def = Object.values(ITEMS).find(d => d.id === itemId);
+    if (!def) return false;
+    let needed = count;
+    // 1. Can merge into existing non-full stacks
+    for (let slot of this.slots) {
+      if (slot && slot.id === itemId && slot.count < def.maxStack) {
+        needed -= (def.maxStack - slot.count);
+        if (needed <= 0) return true;
+      }
+    }
+    // 2. Are there empty slots?
+    for (let slot of this.slots) {
+      if (!slot) return true;
+    }
+    return false;
+  }
+
   // Check crafting feasibility
   canCraft(recipeId) {
     const recipe = RECIPES.find(r => r.id === recipeId);
@@ -230,10 +249,32 @@ export class Inventory {
         return false;
       }
     }
-    return true;
+
+    const resultDef = ITEMS[recipe.result];
+    if (!resultDef) return false;
+
+    if (this.hasRoomForItem(resultDef.id, recipe.count)) {
+      return true;
+    }
+
+    // Check if consuming ingredients will vacate at least one slot
+    for (let ing of recipe.ingredients) {
+      const itemDef = ITEMS[ing.item];
+      let needed = ing.count;
+      for (let slot of this.slots) {
+        if (slot && slot.id === itemDef.id) {
+          if (slot.count <= needed) {
+            return true;
+          }
+          needed -= slot.count;
+        }
+      }
+    }
+
+    return false;
   }
 
-  // Execute crafting
+  // Execute crafting and update state
   craft(recipeId) {
     if (!this.canCraft(recipeId)) return false;
     const recipe = RECIPES.find(r => r.id === recipeId);
@@ -247,10 +288,10 @@ export class Inventory {
 
     // Add crafted result
     const resultDef = ITEMS[recipe.result];
-    this.addItem(resultDef.id, recipe.count);
+    const added = this.addItem(resultDef.id, recipe.count);
 
     if (this.onInventoryChanged) this.onInventoryChanged();
-    return true;
+    return added;
   }
 
   swapSlots(indexA, indexB) {

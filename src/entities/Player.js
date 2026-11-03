@@ -317,7 +317,8 @@ export class Player {
         efficiency = 0.5;
       }
 
-      this.vitals.stamina = Math.min(100, this.vitals.stamina + delta * regenRate * efficiency);
+      const stamBonus = (this.inventory && this.inventory.hasAccessory && this.inventory.hasAccessory('shell_amulet')) ? 1.25 : 1.0;
+      this.vitals.stamina = Math.min(100, this.vitals.stamina + delta * regenRate * efficiency * stamBonus);
     }
 
     // 2. Hunger Depletion over time
@@ -330,6 +331,10 @@ export class Player {
     let thirstDrain = 0.28;
     if (timeWeather && timeWeather.timeOfDay >= 11.0 && timeWeather.timeOfDay <= 15.0) {
       thirstDrain *= 1.5; // Scorching tropical noon heat
+      // Woven Palm Hat protection against scorching sun
+      if (this.inventory && this.inventory.equipment && this.inventory.equipment.head && this.inventory.equipment.head.id === 'palm_hat') {
+        thirstDrain *= 0.8;
+      }
     }
     if (this.isSprinting) {
       thirstDrain *= 1.8;

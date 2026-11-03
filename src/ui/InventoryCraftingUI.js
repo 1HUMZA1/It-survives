@@ -3,16 +3,17 @@ import { ITEMS, RECIPES } from '../items/ItemDefinitions.js';
 import { survivalStats } from '../core/SurvivalStats.js';
 
 export class InventoryCraftingUI {
-  constructor(inventory, buildingSystem, audio, container = document.body) {
+  constructor(inventory, buildingSystem, audio, container = document.body, hud = null) {
     this.inventory = inventory;
     this.buildingSystem = buildingSystem;
     this.audio = audio;
     this.container = container;
+    this.hud = hud;
 
     this.isOpen = false;
     this.selectedSlotIndex = null;
     this.selectedEquipSlot = null;
-    this.selectedRecipeId = 'craft_wooden_axe';
+    this.selectedRecipeId = 'craft_stone_axe';
     this.activeCategory = 'all';
     this.searchQuery = '';
 
@@ -424,6 +425,16 @@ export class InventoryCraftingUI {
         this.render();
       });
 
+      // Double-click to quick-unequip
+      slotEl.addEventListener('dblclick', () => {
+        if (this.inventory.equipment[slotKey]) {
+          this.inventory.unequipItem(slotKey);
+          this.audio.playUIClick();
+          this.selectedEquipSlot = null;
+          this.render();
+        }
+      });
+
       // Drop onto equipment slot from inventory
       slotEl.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -657,6 +668,63 @@ export class InventoryCraftingUI {
       }
       this.selectedChestSlotIndex = null;
       this.render();
+    });
+
+    // Double-click to quick-action (Quick-Equip gear, Quick-Consume food/drink, Quick-Store into chest)
+    el.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const currentItem = this.inventory.slots[index];
+      if (!currentItem) return;
+      const def = Object.values(ITEMS).find(d => d.id === currentItem.id);
+      if (!def) return;
+
+      if (this.activeChest && this.activeChest.userData && this.activeChest.userData.items) {
+        // Quick store into chest
+        const chestItems = this.activeChest.userData.items;
+        let targetIdx = chestItems.findIndex(s => s && s.id === currentItem.id);
+        if (targetIdx !== -1) {
+          chestItems[targetIdx].count += currentItem.count;
+          this.inventory.slots[index] = null;
+        } else {
+          targetIdx = chestItems.findIndex(s => s === null);
+          if (targetIdx !== -1) {
+            chestItems[targetIdx] = { id: currentItem.id, count: currentItem.count };
+            this.inventory.slots[index] = null;
+          }
+        }
+        if (this.inventory.onInventoryChanged) this.inventory.onInventoryChanged();
+        this.audio.playPickup();
+        this.selectedSlotIndex = null;
+        this.render();
+        return;
+      }
+
+      if (def.category === 'equipment') {
+        // Quick equip into gear slot
+        if (this.inventory.equipItem(def.equipSlot, index)) {
+          this.audio.playUIClick();
+          if (this.hud) {
+            this.hud.addNotification(`🛡️ Equipped ${def.name} to ${def.equipSlot.toUpperCase()}`);
+          }
+          this.selectedSlotIndex = null;
+          this.render();
+          return;
+        }
+      } else if (def.category === 'consumable') {
+        // Quick consume
+        this.inventory.removeItem(currentItem.id, 1);
+        if (def.consumable && def.consumable.useSound === 'drink') {
+          this.audio.playDrink ? this.audio.playDrink() : this.audio.playEat();
+        } else {
+          this.audio.playEat();
+        }
+        if (this.hud) {
+          this.hud.addNotification(`🍽️ Consumed ${def.name}`);
+        }
+        this.selectedSlotIndex = null;
+        this.render();
+        return;
+      }
     });
 
     return el;
@@ -1096,6 +1164,10 @@ export class InventoryCraftingUI {
         if (this.inventory.craft(recipe.id)) {
           this.audio.playCraft();
           survivalStats.recordCraft(resultDef.id);
+          if (this.hud) {
+            this.hud.addNotification(`🔨 Crafted 1x ${resultDef.name}!`);
+            this.hud.updateHotbar(this.inventory);
+          }
           craftBtn.classList.add('craft-pulse');
           setTimeout(() => craftBtn.classList.remove('craft-pulse'), 300);
           this.render();

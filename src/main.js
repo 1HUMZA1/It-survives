@@ -173,7 +173,9 @@ class Game {
     this.inventoryUI = new InventoryCraftingUI(
       this.inventory,
       this.building,
-      audio
+      audio,
+      document.body,
+      this.hud
     );
 
     // 3. Settings Modal
@@ -238,6 +240,7 @@ class Game {
     // Exit build mode button on HUD
     this.hud.onExitBuildClick = () => {
       this.hud.setBuildMode(false, this.building, this.inventory);
+      this.player.manualBuildMode = false;
       this.building.cancelBuilding();
       audio.playUIClick();
     };
@@ -245,6 +248,7 @@ class Game {
     // Exit build mode from player
     this.player.onExitBuildMode = () => {
       this.hud.setBuildMode(false, this.building, this.inventory);
+      this.player.manualBuildMode = false;
     };
 
     // Refresh build bar upon placing structure
@@ -325,10 +329,12 @@ class Game {
       if (this.state === this.STATE_PLAYING) {
         if (this.hud.isBuildMode) {
           this.hud.setBuildMode(false, this.building, this.inventory);
+          this.player.manualBuildMode = false;
           this.building.cancelBuilding();
           audio.playUIClick();
         } else {
           this.hud.setBuildMode(true, this.building, this.inventory);
+          this.player.manualBuildMode = true;
           // Default to Wood Foundation / Floor
           this.building.startBuilding('wood_foundation');
           this.hud.updateBuildBar(this.building, this.inventory);

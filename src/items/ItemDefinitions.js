@@ -283,7 +283,7 @@ export const ITEMS = {
   },
   STONE_AXE: {
     id: 'stone_axe',
-    name: 'Stone Hatchet',
+    name: 'Stone Axe',
     category: 'tool',
     toolType: 'axe',
     icon: '🪓',
@@ -471,12 +471,13 @@ ITEMS.STORAGE_CHEST = ITEMS.STORAGE_BOX;
 export const RECIPES = [
   // === Primary Target Survival Recipes ===
   {
-    id: 'craft_wooden_axe',
-    result: 'WOODEN_AXE',
+    id: 'craft_stone_axe',
+    result: 'STONE_AXE',
     count: 1,
     category: 'tools',
     ingredients: [
       { item: 'WOOD', count: 3 },
+      { item: 'STONE', count: 2 },
       { item: 'FIBER', count: 2 }
     ]
   },
@@ -500,6 +501,17 @@ export const RECIPES = [
       { item: 'WOOD', count: 4 },
       { item: 'STONE', count: 2 },
       { item: 'FIBER', count: 2 }
+    ]
+  },
+  {
+    id: 'craft_fishing_rod',
+    result: 'FISHING_ROD',
+    count: 1,
+    category: 'tools',
+    ingredients: [
+      { item: 'WOOD', count: 3 },
+      { item: 'FIBER', count: 4 },
+      { item: 'STONE', count: 1 }
     ]
   },
   {
@@ -533,27 +545,15 @@ export const RECIPES = [
       { item: 'FIBER', count: 3 }
     ]
   },
-  {
-    id: 'craft_fishing_rod',
-    result: 'FISHING_ROD',
-    count: 1,
-    category: 'tools',
-    ingredients: [
-      { item: 'WOOD', count: 3 },
-      { item: 'FIBER', count: 4 },
-      { item: 'STONE', count: 1 }
-    ]
-  },
 
   // === Additional Tools & Equipment ===
   {
-    id: 'craft_stone_axe',
-    result: 'STONE_AXE',
+    id: 'craft_wooden_axe',
+    result: 'WOODEN_AXE',
     count: 1,
     category: 'tools',
     ingredients: [
       { item: 'WOOD', count: 3 },
-      { item: 'STONE', count: 2 },
       { item: 'FIBER', count: 2 }
     ]
   },
